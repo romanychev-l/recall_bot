@@ -1,5 +1,6 @@
 services:
   bot:
+    image: ghcr.io/romanychev-l/recall_bot/bot:latest
     build: .
     restart: unless-stopped
     env_file: .env

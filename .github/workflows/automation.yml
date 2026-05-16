@@ -54,8 +54,8 @@ jobs:
             git checkout main
             git pull
 
-            docker compose down
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
+            docker compose pull
             docker compose up -d
 
             echo "Deployment complete"

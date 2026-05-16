@@ -1,5 +1,5 @@
 FROM python:3.14-slim-bookworm AS compile-image
-COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
+RUN pip install --no-cache-dir uv==0.11.14
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv

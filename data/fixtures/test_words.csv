@@ -1,0 +1,51 @@
+english,translation,frequency_rank,pos,example,is_phrasal
+be,быть,1,verb,To be or not to be.,false
+have,иметь,2,verb,I have a book.,false
+do,делать,3,verb,Do your homework.,false
+say,говорить,4,verb,She said hello.,false
+get,получать,5,verb,I got a gift.,false
+make,делать,6,verb,Make a sandwich.,false
+go,идти,7,verb,Let's go home.,false
+know,знать,8,verb,I know the answer.,false
+take,брать,9,verb,Take this book.,false
+see,видеть,10,verb,I see you.,false
+come,приходить,11,verb,Come here.,false
+think,думать,12,verb,I think so.,false
+look,смотреть,13,verb,Look at this.,false
+want,хотеть,14,verb,I want pizza.,false
+give,давать,15,verb,Give me water.,false
+use,использовать,16,verb,Use this pen.,false
+find,находить,17,verb,Find your keys.,false
+tell,рассказывать,18,verb,Tell me a story.,false
+ask,спрашивать,19,verb,Ask a question.,false
+work,работать,20,verb,I work here.,false
+day,день,21,noun,A nice day.,false
+time,время,22,noun,What time is it?,false
+year,год,23,noun,Last year.,false
+hand,рука,24,noun,Wash your hands.,false
+life,жизнь,25,noun,Life is good.,false
+world,мир,26,noun,Around the world.,false
+school,школа,27,noun,Go to school.,false
+state,штат,28,noun,A united state.,false
+family,семья,29,noun,My family is big.,false
+student,студент,30,noun,A good student.,false
+group,группа,31,noun,A small group.,false
+country,страна,32,noun,A big country.,false
+problem,проблема,33,noun,No problem.,false
+house,дом,34,noun,A small house.,false
+hour,час,35,noun,One hour.,false
+game,игра,36,noun,A fun game.,false
+line,линия,37,noun,A straight line.,false
+end,конец,38,noun,The end of the story.,false
+member,член,39,noun,A team member.,false
+car,машина,40,noun,A red car.,false
+city,город,41,noun,A big city.,false
+community,сообщество,42,noun,Our community.,false
+president,президент,43,noun,The president speaks.,false
+team,команда,44,noun,Our team won.,false
+minute,минута,45,noun,One minute please.,false
+idea,идея,46,noun,A good idea.,false
+kid,ребёнок,47,noun,My kids are happy.,false
+body,тело,48,noun,Take care of your body.,false
+information,информация,49,noun,Useful information.,false
+back,спина,50,noun,My back hurts.,false

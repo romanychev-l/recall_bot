@@ -138,6 +138,11 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Project-specific
+data/.cache/
+kaikki.org-dictionary-English.jsonl.gz
+*.jsonl.gz
+
 # mypy
 .mypy_cache/
 .dmypy.json

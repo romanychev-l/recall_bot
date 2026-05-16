@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     MONGO_PORT: int = 27017
     MONGO_DB_NAME: str = "bot_db"
     LOG_LEVEL: str = "INFO"
+    SCHEDULER_TZ: str = "UTC"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

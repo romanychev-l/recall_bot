@@ -10,3 +10,8 @@ README.md
 LICENSE
 .dockerignore
 .gitignore
+.venv
+tests
+data/.cache
+kaikki.org-dictionary-English.jsonl.gz
+*.jsonl.gz

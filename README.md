@@ -27,25 +27,35 @@ Telegram-бот для изучения английских слов метод
 
 ## Быстрый старт
 
+### Локально (uv)
+
 ```bash
-cp .env.example .env
-# .env: TOKEN=<от BotFather>
+# 1) установить uv (если нет): https://docs.astral.sh/uv/
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 1) Поднимаем Mongo + бота
-docker compose up -d
+# 2) синк зависимостей и venv (~10 сек)
+uv sync
 
-# 2) Сидим словарь (внутри контейнера или из хоста с pip-установленным python)
-make seed              # тестовый словарь (50 слов)
+# 3) запуск
+cp .env.example .env       # вписать TOKEN
+uv run python -m bot
 # или
-make seed-full         # полный словарь из data/dictionary.csv
+make run-local
 ```
 
-Локально без Docker:
+Тесты:
+```bash
+make test                  # uv run pytest -v
+```
+
+### Через Docker
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python -m bot
+cp .env.example .env
+docker compose up -d --build
+
+# засеять словарь внутри контейнера бота:
+make seed-docker
 ```
 
 ## Словарь
@@ -133,8 +143,7 @@ bot/
 ## Тесты
 
 ```bash
-make test
-# pytest -v
+make test     # uv run pytest -v
 ```
 
 Покрытие: SRS state machine (graduation, lapse, counter), matching, batch progression, learning service (правильно/неправильно/transition), stats (accuracy, streak).

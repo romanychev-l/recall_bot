@@ -194,13 +194,35 @@ async def on_skip(
     await _show_next(callback.message.chat.id, callback.message.bot, state, container, i18n)
 
 
-@router.callback_query(LearnSG.waiting_answer, F.data.startswith("card:hard:"))
-async def on_hard(
+@router.callback_query(LearnSG.waiting_answer, F.data.startswith("card:dontknow:"))
+async def on_dont_know(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
     i18n: TranslatorRunner,
 ) -> None:
+    """User gives up — reveal the word, count as wrong, mark hard, advance."""
     word_id_hex = callback.data.split(":", 2)[2]
-    await container.learning.mark_hard(callback.from_user.id, ObjectId(word_id_hex), True)
-    await callback.answer(i18n.message.marked_hard())
+    word_id = ObjectId(word_id_hex)
+    user = await container.users_repo.get(callback.from_user.id)
+    if user is None:
+        await callback.answer()
+        return
+    card = await container.cards_repo.get(callback.from_user.id, word_id)
+    if card is None:
+        await callback.answer()
+        return
+
+    outcome = await container.learning.evaluate_answer(user, card, "", )
+    await container.learning.mark_hard(callback.from_user.id, word_id, True)
+    await callback.message.answer(
+        i18n.message.answer_revealed(word=outcome.correct_english)
+    )
+
+    data = await state.get_data()
+    queue: list[str] = data.get("queue", [])
+    if queue and queue[0] == word_id_hex:
+        queue.pop(0)
+        await state.update_data(queue=queue)
+    await callback.answer()
+    await _show_next(callback.message.chat.id, callback.message.bot, state, container, i18n)

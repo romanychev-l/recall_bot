@@ -46,6 +46,23 @@ async def test_streak_today_and_yesterday(
 
 
 @pytest.mark.asyncio
+async def test_today_counts(users_repo, cards_repo, review_log_repo) -> None:
+    now = datetime(2026, 6, 1, 14, tzinfo=timezone.utc)
+    wid, bid = ObjectId(), ObjectId()
+    # 3 today, 1 yesterday
+    for r, days, hours in [("good", 0, 1), ("good", 0, 2), ("again", 0, 3), ("good", 1, 1)]:
+        await review_log_repo.append(
+            user_id=1, word_id=wid, batch_id=bid,
+            result=r, user_input="x",
+            reviewed_at=now - timedelta(days=days, hours=hours),
+        )
+    stats = StatsService(users_repo, cards_repo, review_log_repo)
+    correct, total = await stats.today_counts(1, "UTC", now=now)
+    assert total == 3
+    assert correct == 2
+
+
+@pytest.mark.asyncio
 async def test_streak_broken(users_repo, cards_repo, review_log_repo) -> None:
     now = datetime(2026, 6, 10, 20, tzinfo=timezone.utc)
     wid, bid = ObjectId(), ObjectId()

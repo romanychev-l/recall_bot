@@ -120,16 +120,21 @@ def iter_kaikki(path: Path) -> Iterator[dict]:
                 continue
 
 
+MAX_TRANSLATIONS_PER_WORD = 3
+
+
 def build_kaikki_index(
     kaikki_path: Path, wanted: set[str]
 ) -> dict[str, tuple[str, str]]:
-    """Stream the kaikki dump; collect (translation, pos) for each wanted lemma.
+    """Stream the kaikki dump; collect (joined_translations, pos) for each wanted lemma.
 
-    Prefer the entry whose POS has the highest priority. For each English headword,
-    take the first Russian translation found (kaikki orders translations by frequency
-    within a sense, and senses by importance).
+    For each English headword:
+      - Prefer the entry whose POS has the highest priority.
+      - Collect up to MAX_TRANSLATIONS_PER_WORD distinct Russian translations
+        across senses (in order of appearance — kaikki orders by sense importance).
+      - Join with "; " so the card shows multiple candidates at once.
     """
-    out: dict[str, tuple[str, str, int]] = {}  # english -> (translation, pos, pos_priority)
+    out: dict[str, tuple[str, str, int]] = {}  # english -> (joined, pos, pos_priority)
     for entry in iter_kaikki(kaikki_path):
         word = (entry.get("word") or "").lower()
         if not word or word not in wanted:
@@ -139,9 +144,9 @@ def build_kaikki_index(
         existing = out.get(word)
         if existing and existing[2] <= pos_pri:
             continue
-        # Find first ru translation. Check top-level translations first,
-        # then each sense's translations (most are in senses[].translations).
-        chosen: Optional[str] = None
+
+        chosen: list[str] = []
+        seen: set[str] = set()
         translation_lists = [entry.get("translations") or []]
         for sense in entry.get("senses") or []:
             translation_lists.append(sense.get("translations") or [])
@@ -152,13 +157,17 @@ def build_kaikki_index(
                 w = tr.get("word")
                 if not w:
                     continue
-                chosen = strip_stress(w).strip()
-                if chosen:
+                clean = strip_stress(w).strip()
+                if not clean or clean.lower() in seen:
+                    continue
+                seen.add(clean.lower())
+                chosen.append(clean)
+                if len(chosen) >= MAX_TRANSLATIONS_PER_WORD:
                     break
-            if chosen:
+            if len(chosen) >= MAX_TRANSLATIONS_PER_WORD:
                 break
         if chosen:
-            out[word] = (chosen, pos, pos_pri)
+            out[word] = ("; ".join(chosen), pos, pos_pri)
     return {k: (v[0], v[1]) for k, v in out.items()}
 
 

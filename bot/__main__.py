@@ -12,6 +12,7 @@ from bot.config_data.config import config_settings, db
 from bot.container import build_container
 from bot.handlers.actions import router as actions_router
 from bot.handlers.fallback import router as fallback_router
+from bot.handlers.help import router as help_router
 from bot.handlers.learn import router as learn_router
 from bot.handlers.settings import router as settings_router
 from bot.handlers.start import router as start_router
@@ -56,6 +57,7 @@ async def main() -> None:
     await container.review_log_repo.ensure_indexes()
 
     dp.include_router(start_router)
+    dp.include_router(help_router)
     dp.include_router(learn_router)
     dp.include_router(stats_router)
     dp.include_router(settings_router)

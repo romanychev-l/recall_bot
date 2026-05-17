@@ -14,10 +14,10 @@ def answer_actions_kb(i18n, word_id_hex: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text=i18n.button.skip(), callback_data=f"card:skip:{word_id_hex}"
+                text=i18n.button.dont_know(), callback_data=f"card:dontknow:{word_id_hex}"
             ),
             InlineKeyboardButton(
-                text=i18n.button.hard(), callback_data=f"card:hard:{word_id_hex}"
+                text=i18n.button.skip(), callback_data=f"card:skip:{word_id_hex}"
             ),
         ],
     ])

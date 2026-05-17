@@ -135,9 +135,28 @@ class CardsRepo:
             {"user_id": user_id, "my_state": "graduated"}
         )
 
+    async def count_by_state(self, user_id: int) -> dict[str, int]:
+        """Return {state: count} for all four states."""
+        out = {STATE_NEW: 0, STATE_LEARNING: 0, STATE_REVIEW: 0, "graduated": 0}
+        cursor = self._coll.aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$group": {"_id": "$my_state", "n": {"$sum": 1}}},
+        ])
+        async for doc in cursor:
+            out[doc["_id"]] = doc["n"]
+        return out
+
     async def graduated_ranks(self, user_id: int) -> list[int]:
         cursor = self._coll.find(
             {"user_id": user_id, "my_state": "graduated"},
+            projection={"frequency_rank": 1},
+        )
+        return [doc["frequency_rank"] async for doc in cursor]
+
+    async def learned_ranks(self, user_id: int) -> list[int]:
+        """Ranks of cards in review OR graduated state — 'made it past first interval'."""
+        cursor = self._coll.find(
+            {"user_id": user_id, "my_state": {"$in": [STATE_REVIEW, "graduated"]}},
             projection={"frequency_rank": 1},
         )
         return [doc["frequency_rank"] async for doc in cursor]

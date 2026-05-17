@@ -23,6 +23,20 @@ class StatsService:
     async def graduated_count(self, user_id: int) -> int:
         return await self.cards_repo.count_graduated(user_id)
 
+    async def state_counts(self, user_id: int) -> dict[str, int]:
+        return await self.cards_repo.count_by_state(user_id)
+
+    async def today_counts(
+        self, user_id: int, tz: str, now: Optional[datetime] = None
+    ) -> tuple[int, int]:
+        """Return (correct_today, total_today) in user's local day."""
+        from zoneinfo import ZoneInfo
+        now = now or datetime.now(timezone.utc)
+        local = now.astimezone(ZoneInfo(tz))
+        day_start_local = local.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_start_utc = day_start_local.astimezone(timezone.utc)
+        return await self.review_log_repo.stats_for_window(user_id, day_start_utc)
+
     async def accuracy_7d(self, user_id: int, now: Optional[datetime] = None) -> float:
         now = now or datetime.now(timezone.utc)
         since = now - timedelta(days=7)
@@ -53,7 +67,8 @@ class StatsService:
         return streak
 
     async def cefr_progress(self, user_id: int) -> dict[str, dict[str, int]]:
-        ranks = await self.cards_repo.graduated_ranks(user_id)
+        """CEFR progress based on cards that passed first interval (review + graduated)."""
+        ranks = await self.cards_repo.learned_ranks(user_id)
         return cefr_progress(ranks)
 
     @staticmethod

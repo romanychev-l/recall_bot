@@ -138,7 +138,7 @@ class CardsRepo:
     async def count_by_state(self, user_id: int) -> dict[str, int]:
         """Return {state: count} for all four states."""
         out = {STATE_NEW: 0, STATE_LEARNING: 0, STATE_REVIEW: 0, "graduated": 0}
-        cursor = self._coll.aggregate([
+        cursor = await self._coll.aggregate([
             {"$match": {"user_id": user_id}},
             {"$group": {"_id": "$my_state", "n": {"$sum": 1}}},
         ])

@@ -189,6 +189,7 @@ make push-ci-config        # gh secret set -f + gh variable set -f
 | Секрет             | Что                                                |
 |--------------------|----------------------------------------------------|
 | `BOT_TOKEN`        | Токен бота от @BotFather → станет `TOKEN` в `.env` |
+| `MONGO_URI`        | Опционально. Полный URI с auth, e.g. `mongodb://u:p@host:27017/?authSource=admin`. Если пусто — собирается из MONGO_HOST/PORT. |
 | `SSH_HOST`         | IP/домен сервера                                   |
 | `SSH_USER`         | SSH-пользователь                                   |
 | `SSH_PRIVATE_KEY`  | Приватный ключ (содержимое целиком, OpenSSH-формат)|
@@ -197,14 +198,22 @@ make push-ci-config        # gh secret set -f + gh variable set -f
 
 ### Опциональные **Variables** (`… → Variables`)
 
-| Variable         | Назначение                       | Default       |
-|------------------|----------------------------------|---------------|
-| `MONGO_DB_NAME`  | Имя БД                           | `recall_bot`  |
-| `LOG_LEVEL`      | Уровень логов                    | `INFO`        |
-| `SCHEDULER_TZ`   | TZ для APScheduler (см. tzdata)  | `UTC`         |
+| Variable         | Назначение                                     | Default                  |
+|------------------|------------------------------------------------|--------------------------|
+| `MONGO_HOST`     | Хост mongo (как видит контейнер бота)          | `host.docker.internal`   |
+| `MONGO_PORT`     | Порт mongo                                     | `27017`                  |
+| `MONGO_DB_NAME`  | Имя БД                                         | `recall_bot`             |
+| `LOG_LEVEL`      | Уровень логов                                  | `INFO`                   |
+| `SCHEDULER_TZ`   | TZ для APScheduler (см. tzdata)                | `UTC`                    |
 
-`MONGO_HOST` и `MONGO_PORT` в `.env` не нужны — `docker-compose.yml`
-жёстко зашивает их (`mongo:27017`) для внутренней docker-сети.
+### Mongo
+
+`docker-compose.yml` **не** поднимает mongo — бот подключается к
+**хостовой** mongo через `host.docker.internal` (прописан в `extra_hosts`,
+работает и на Linux, и на Mac). Для прода с auth — используй `MONGO_URI`.
+
+Если нужно поднять mongo в compose (dev-стенд без хостовой БД):
+добавь сервис вручную и переключи `MONGO_HOST=mongo`.
 
 ### Что нужно на сервере один раз
 

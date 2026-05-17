@@ -1,20 +1,32 @@
-from pymongo import AsyncMongoClient
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
+
 from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pymongo import AsyncMongoClient
 
 
 class Settings(BaseSettings):
     TOKEN: SecretStr
+
+    # Either set MONGO_URI directly (recommended), or use host/port pieces.
+    MONGO_URI: Optional[str] = None
     MONGO_HOST: str = "localhost"
     MONGO_PORT: int = 27017
-    MONGO_DB_NAME: str = "bot_db"
+    MONGO_DB_NAME: str = "recall_bot"
+
     LOG_LEVEL: str = "INFO"
     SCHEDULER_TZ: str = "UTC"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    @property
+    def mongo_uri(self) -> str:
+        if self.MONGO_URI:
+            return self.MONGO_URI
+        return f"mongodb://{self.MONGO_HOST}:{self.MONGO_PORT}"
+
 
 config_settings = Settings()
 
-mongo_client = AsyncMongoClient(config_settings.MONGO_HOST, config_settings.MONGO_PORT)
+mongo_client = AsyncMongoClient(config_settings.mongo_uri)
 db = mongo_client[config_settings.MONGO_DB_NAME]

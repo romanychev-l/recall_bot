@@ -42,6 +42,9 @@ jobs:
           APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ secrets.SSH_USER }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_HOST: ${{ vars.MONGO_HOST || 'host.docker.internal' }}
+          MONGO_PORT: ${{ vars.MONGO_PORT || '27017' }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'recall_bot' }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
           SCHEDULER_TZ: ${{ vars.SCHEDULER_TZ || 'UTC' }}
@@ -50,7 +53,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: APPTOKEN,USERNAME,BOT_TOKEN,MONGO_DB_NAME,LOG_LEVEL,SCHEDULER_TZ
+          envs: APPTOKEN,USERNAME,BOT_TOKEN,MONGO_URI,MONGO_HOST,MONGO_PORT,MONGO_DB_NAME,LOG_LEVEL,SCHEDULER_TZ
           script: |
             set -e
             echo "Starting deployment..."
@@ -63,6 +66,9 @@ jobs:
             umask 077
             cat > .env <<EOF
             TOKEN=$BOT_TOKEN
+            MONGO_URI=$MONGO_URI
+            MONGO_HOST=$MONGO_HOST
+            MONGO_PORT=$MONGO_PORT
             MONGO_DB_NAME=$MONGO_DB_NAME
             LOG_LEVEL=$LOG_LEVEL
             SCHEDULER_TZ=$SCHEDULER_TZ

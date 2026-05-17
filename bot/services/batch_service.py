@@ -28,13 +28,15 @@ class BatchService:
         self.srs = srs
 
     async def issue_next_batch(
-        self, user: dict, now: Optional[datetime] = None
+        self,
+        user: dict,
+        now: Optional[datetime] = None,
+        size_override: Optional[int] = None,
     ) -> Optional[ObjectId]:
         now = now or datetime.now(timezone.utc)
         start_rank = user.get("next_batch_start_rank", user.get("initial_rank", 0))
-        words = await self.words_repo.next_n_with_rank_gte(
-            start_rank, user["batch_size"]
-        )
+        size = size_override or user["batch_size"]
+        words = await self.words_repo.next_n_with_rank_gte(start_rank, size)
         if not words:
             logger.info("no_more_words user_id=%s start_rank=%s", user["_id"], start_rank)
             return None

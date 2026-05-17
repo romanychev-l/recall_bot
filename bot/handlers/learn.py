@@ -80,6 +80,49 @@ async def cmd_learn(
     await _show_next(message.chat.id, message.bot, state, container, i18n)
 
 
+@router.message(Command("cram"))
+async def cmd_cram(
+    message: Message,
+    state: FSMContext,
+    container: Container,
+    i18n: TranslatorRunner,
+) -> None:
+    """Force-issue a custom-size batch of NEW words and start a session.
+
+    Use when you want to blast through known vocabulary faster than the
+    daily SRS schedule allows. Usage: /cram [N], default 50, max 500.
+    """
+    user = await container.users_repo.get(message.from_user.id)
+    if user is None:
+        await message.answer(i18n.message.not_onboarded())
+        return
+    parts = (message.text or "").split()
+    try:
+        n = int(parts[1]) if len(parts) > 1 else 50
+    except ValueError:
+        n = 50
+    if n < 1 or n > 500:
+        await message.answer(i18n.message.cram_bad_n())
+        return
+
+    batch_id = await container.batch.issue_next_batch(user, size_override=n)
+    if batch_id is None:
+        await message.answer(i18n.message.no_more_words())
+        return
+    user = await container.users_repo.get(message.from_user.id)
+    session = await container.learning.build_session(user, cap=n)
+    if not session:
+        await message.answer(i18n.message.nothing_due())
+        return
+    await state.set_state(LearnSG.waiting_answer)
+    await state.update_data(
+        user_id=message.from_user.id,
+        queue=_hex_ids(session),
+    )
+    await message.answer(i18n.message.cram_started(n=len(session)))
+    await _show_next(message.chat.id, message.bot, state, container, i18n)
+
+
 @router.message(LearnSG.waiting_answer, F.text)
 async def on_answer(
     message: Message,

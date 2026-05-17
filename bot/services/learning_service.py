@@ -47,12 +47,15 @@ class LearningService:
         self.batch_service = batch_service
 
     async def build_session(
-        self, user: dict, now: Optional[datetime] = None
+        self,
+        user: dict,
+        now: Optional[datetime] = None,
+        cap: Optional[int] = None,
     ) -> list[dict]:
         now = now or datetime.now(timezone.utc)
-        daily_goal = user.get("daily_goal", user["batch_size"])
-        due = await self.cards_repo.find_due(user["_id"], now, daily_goal)
-        remaining = max(0, daily_goal - len(due))
+        cap = cap or user.get("daily_goal", user["batch_size"])
+        due = await self.cards_repo.find_due(user["_id"], now, cap)
+        remaining = max(0, cap - len(due))
         new_cards: list[dict] = []
         if user.get("current_batch_id") is not None and remaining > 0:
             new_cards = await self.cards_repo.find_new_in_batch(

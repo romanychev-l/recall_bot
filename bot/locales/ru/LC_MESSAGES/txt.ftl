@@ -21,7 +21,10 @@ message-skipped_today = Пропущено до завтра
 message-marked_hard = Помечено как сложное
 message-skip_only_inline = /skip работает через кнопку в карточке.
 message-hard_only_inline = /hard работает через кнопку в карточке.
-message-unknown_command = Не понимаю. Команды: /start /learn /stats /settings
+message-unknown_command = Не понимаю. Команды: /start /learn /cram /stats /settings
+message-cram_started = 🚀 Cram-сессия: { $n } новых слов.
+message-cram_bad_n = /cram N — число от 1 до 500.
+message-no_more_words = В словаре больше нет слов 🎉
 message-settings_summary =
     Настройки:
 

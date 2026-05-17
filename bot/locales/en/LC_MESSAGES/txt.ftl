@@ -21,7 +21,10 @@ message-skipped_today = Skipped until tomorrow
 message-marked_hard = Marked as hard
 message-skip_only_inline = /skip works via the card button.
 message-hard_only_inline = /hard works via the card button.
-message-unknown_command = I don't understand. Commands: /start /learn /stats /settings
+message-unknown_command = I don't understand. Commands: /start /learn /cram /stats /settings
+message-cram_started = 🚀 Cram session: { $n } new words.
+message-cram_bad_n = /cram N — number from 1 to 500.
+message-no_more_words = No more words in the dictionary 🎉
 message-settings_summary =
     Settings:
 

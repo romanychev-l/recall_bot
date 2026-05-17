@@ -120,7 +120,8 @@ def iter_kaikki(path: Path) -> Iterator[dict]:
                 continue
 
 
-MAX_TRANSLATIONS_PER_WORD = 3
+MAX_PER_ENTRY = 3
+MAX_TOTAL = 5
 
 
 def build_kaikki_index(
@@ -128,29 +129,42 @@ def build_kaikki_index(
 ) -> dict[str, tuple[str, str]]:
     """Stream the kaikki dump; collect (joined_translations, pos) for each wanted lemma.
 
-    For each English headword:
-      - Prefer the entry whose POS has the highest priority.
-      - Collect up to MAX_TRANSLATIONS_PER_WORD distinct Russian translations
-        across senses (in order of appearance — kaikki orders by sense importance).
-      - Join with "; " so the card shows multiple candidates at once.
+    A word like "very" has separate adj and adv entries in Wiktionary
+    (the adj is "the very man", the adv is "очень"). Picking only one
+    POS would drop the dominant adv meaning. So we accumulate across
+    ALL POS entries for a word — up to MAX_PER_ENTRY per entry,
+    MAX_TOTAL overall. POS label on the row is the one with highest
+    POS_PRIORITY (used downstream for display only, doesn't affect
+    matching).
     """
-    out: dict[str, tuple[str, str, int]] = {}  # english -> (joined, pos, pos_priority)
+    out: dict[str, dict] = {}
+
     for entry in iter_kaikki(kaikki_path):
         word = (entry.get("word") or "").lower()
         if not word or word not in wanted:
             continue
         pos = entry.get("pos") or ""
         pos_pri = POS_PRIORITY.get(pos, 99)
-        existing = out.get(word)
-        if existing and existing[2] <= pos_pri:
+        rec = out.setdefault(word, {
+            "translations": [],
+            "seen": set(),
+            "best_pos": pos,
+            "best_pos_pri": pos_pri,
+        })
+        if pos_pri < rec["best_pos_pri"]:
+            rec["best_pos"] = pos
+            rec["best_pos_pri"] = pos_pri
+
+        if len(rec["translations"]) >= MAX_TOTAL:
             continue
 
-        chosen: list[str] = []
-        seen: set[str] = set()
+        added_here = 0
         translation_lists = [entry.get("translations") or []]
         for sense in entry.get("senses") or []:
             translation_lists.append(sense.get("translations") or [])
         for tr_list in translation_lists:
+            if added_here >= MAX_PER_ENTRY or len(rec["translations"]) >= MAX_TOTAL:
+                break
             for tr in tr_list:
                 if tr.get("lang_code") != "ru":
                     continue
@@ -158,17 +172,19 @@ def build_kaikki_index(
                 if not w:
                     continue
                 clean = strip_stress(w).strip()
-                if not clean or clean.lower() in seen:
+                if not clean or clean.lower() in rec["seen"]:
                     continue
-                seen.add(clean.lower())
-                chosen.append(clean)
-                if len(chosen) >= MAX_TRANSLATIONS_PER_WORD:
+                rec["seen"].add(clean.lower())
+                rec["translations"].append(clean)
+                added_here += 1
+                if added_here >= MAX_PER_ENTRY or len(rec["translations"]) >= MAX_TOTAL:
                     break
-            if len(chosen) >= MAX_TRANSLATIONS_PER_WORD:
-                break
-        if chosen:
-            out[word] = ("; ".join(chosen), pos, pos_pri)
-    return {k: (v[0], v[1]) for k, v in out.items()}
+
+    return {
+        w: ("; ".join(r["translations"]), r["best_pos"])
+        for w, r in out.items()
+        if r["translations"]
+    }
 
 
 def append_phrasal(out_rows: list[dict], phrasal_csv: Path, start_rank: int) -> int:

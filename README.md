@@ -208,12 +208,14 @@ make push-ci-config        # gh secret set -f + gh variable set -f
 
 ### Mongo
 
-`docker-compose.yml` **не** поднимает mongo — бот подключается к
-**хостовой** mongo через `host.docker.internal` (прописан в `extra_hosts`,
-работает и на Linux, и на Mac). Для прода с auth — используй `MONGO_URI`.
+`docker-compose.yml` **не** поднимает mongo. Бот запущен в
+`network_mode: host` (Linux) — он шарит сетевой стек хоста, поэтому
+`MONGO_HOST=127.0.0.1` указывает на хостовую mongo напрямую, минуя
+DNS docker'а и проблемы с `bindIp`. Для прода с auth — `MONGO_URI`.
 
-Если нужно поднять mongo в compose (dev-стенд без хостовой БД):
-добавь сервис вручную и переключи `MONGO_HOST=mongo`.
+Если нужно поднять mongo в compose (dev-стенд без хостовой БД) или
+бежать на Mac/Windows (где `network_mode: host` не работает) — убери
+`network_mode`, добавь сервис mongo и переключи `MONGO_HOST=mongo`.
 
 ### Что нужно на сервере один раз
 

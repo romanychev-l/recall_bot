@@ -3,9 +3,8 @@ services:
     image: ghcr.io/romanychev-l/recall_bot/bot:latest
     build: .
     restart: unless-stopped
+    network_mode: host
     env_file: .env
     environment:
-      MONGO_HOST: host.docker.internal
+      MONGO_HOST: 127.0.0.1
       MONGO_PORT: "27017"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"

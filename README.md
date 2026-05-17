@@ -163,5 +163,40 @@ make test     # uv run pytest -v
 
 ## CI/CD
 
-GitHub Actions: build → GHCR push → SSH deploy. Секреты в репозитории:
-`SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `SSH_PORT`, `DEPLOY_PATH`.
+GitHub Actions: build → GHCR push → SSH deploy. На сервере `.env`
+**пересоздаётся каждым деплоем** из CI-секретов (старый файл перезаписывается).
+
+### Обязательные **Secrets** (`Settings → Secrets and variables → Actions → Secrets`)
+
+| Секрет             | Что                                                |
+|--------------------|----------------------------------------------------|
+| `BOT_TOKEN`        | Токен бота от @BotFather → станет `TOKEN` в `.env` |
+| `SSH_HOST`         | IP/домен сервера                                   |
+| `SSH_USER`         | SSH-пользователь                                   |
+| `SSH_PRIVATE_KEY`  | Приватный ключ (содержимое целиком, OpenSSH-формат)|
+| `SSH_PORT`         | Порт SSH                                           |
+| `DEPLOY_PATH`      | Путь к репозиторию на сервере (`/home/u/recall_bot`)|
+
+### Опциональные **Variables** (`… → Variables`)
+
+| Variable         | Назначение                       | Default       |
+|------------------|----------------------------------|---------------|
+| `MONGO_DB_NAME`  | Имя БД                           | `recall_bot`  |
+| `LOG_LEVEL`      | Уровень логов                    | `INFO`        |
+| `SCHEDULER_TZ`   | TZ для APScheduler (см. tzdata)  | `UTC`         |
+
+`MONGO_HOST` и `MONGO_PORT` в `.env` не нужны — `docker-compose.yml`
+жёстко зашивает их (`mongo:27017`) для внутренней docker-сети.
+
+### Что нужно на сервере один раз
+
+```bash
+git clone git@github.com:<you>/recall_bot.git ~/dev/recall_bot
+cd ~/dev/recall_bot
+# первый раз .env пустой — деплой его создаст
+docker compose pull          # подтянет образ из ghcr (после первого CI run)
+```
+
+Если пакет на GHCR приватный — на сервере один раз залогиниться:
+`echo "<PAT>" | docker login ghcr.io -u <username> --password-stdin`,
+где PAT с `read:packages`. Публичный пакет — авторизация не нужна.

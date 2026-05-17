@@ -41,18 +41,32 @@ jobs:
         env:
           APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ secrets.SSH_USER }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'recall_bot' }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
+          SCHEDULER_TZ: ${{ vars.SCHEDULER_TZ || 'UTC' }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: APPTOKEN,USERNAME
+          envs: APPTOKEN,USERNAME,BOT_TOKEN,MONGO_DB_NAME,LOG_LEVEL,SCHEDULER_TZ
           script: |
+            set -e
             echo "Starting deployment..."
             cd ${{ secrets.DEPLOY_PATH }}
 
             git checkout main
             git pull
+
+            # Render .env from CI secrets so the bot container picks up TOKEN etc.
+            umask 077
+            cat > .env <<EOF
+            TOKEN=$BOT_TOKEN
+            MONGO_DB_NAME=$MONGO_DB_NAME
+            LOG_LEVEL=$LOG_LEVEL
+            SCHEDULER_TZ=$SCHEDULER_TZ
+            EOF
 
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
             docker compose pull

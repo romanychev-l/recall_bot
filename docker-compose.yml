@@ -4,5 +4,8 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    environment:
+      MONGO_HOST: host.docker.internal
+      MONGO_PORT: "27017"
     extra_hosts:
       - "host.docker.internal:host-gateway"

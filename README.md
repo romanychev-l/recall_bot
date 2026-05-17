@@ -170,6 +170,16 @@ make test     # uv run pytest -v
 GitHub Actions: build → GHCR push → SSH deploy. На сервере `.env`
 **пересоздаётся каждым деплоем** из CI-секретов (старый файл перезаписывается).
 
+### Залить всё одной командой
+
+```bash
+cp .env.ci.example .env.ci
+# заполнить .env.ci
+make push-ci-config        # gh secret set -f + gh variable set -f
+```
+
+Требует [gh CLI](https://cli.github.com/) с `gh auth login`. `.env.ci` в `.gitignore`.
+
 ### Обязательные **Secrets** (`Settings → Secrets and variables → Actions → Secrets`)
 
 | Секрет             | Что                                                |

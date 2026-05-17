@@ -142,6 +142,9 @@ venv.bak/
 data/.cache/
 kaikki.org-dictionary-English.jsonl.gz
 *.jsonl.gz
+.env.ci
+.env.ci.secrets
+.env.ci.vars
 
 # mypy
 .mypy_cache/

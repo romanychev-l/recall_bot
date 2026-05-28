@@ -1,10 +1,16 @@
 message-welcome =
     Hi! I'm a spaced-repetition bot for learning English vocabulary.
 
-    Choose your starting point:
-message-onboarded_zero = Starting from the most frequent words. Ready!
-message-onboarded_skip = Skipping the first { $n } words. Ready!
-message-ask_skip_n = How many words to skip (0–100000)? Send a number.
+    Words go from the most frequent to rarer ones. Where do we start?
+
+    🌱 <b>From scratch</b> — if you're a beginner.
+    ⏩ <b>I know some already</b> — skip the basics, you'll say how many.
+message-onboarded_zero = Great — starting from the most frequent words 👍
+message-onboarded_skip = Done! Skipped the first { $n } words — starting right after them.
+message-ask_skip_n =
+    How many of the most frequent words do you already know?
+
+    Send a number — we'll start with the next word (0–100000).
 message-bad_skip_n = Need an integer from 0 to 100000.
 message-try_learn_hint = Use /learn to start a session.
 message-not_onboarded = First use /start.
@@ -72,8 +78,8 @@ message-help =
 
     Just type the English word in chat — that's your answer.
 
-button-start_zero = From scratch (most frequent)
-button-start_skip = I already know N words
+button-start_zero = 🌱 Start from scratch
+button-start_skip = ⏩ I already know some
 button-skip = ⏭ Skip
 button-hard = Hard
 button-dont_know = 🤔 Don't know

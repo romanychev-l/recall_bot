@@ -99,6 +99,33 @@ def test_graduation_requires_5_consecutive_at_30d(srs: SrsService) -> None:
     assert counter >= GRADUATION_MIN_CONSECUTIVE
 
 
+def test_review_with_naive_stored_datetimes(srs: SrsService) -> None:
+    """Regression: Mongo returns naive datetimes; reviewing with an aware `now`
+    must not raise 'can't subtract offset-naive and offset-aware datetimes'."""
+    now = _now()
+    card = srs.new_card_dict(now)
+    # First review populates last_review (tz-aware in memory)
+    upd = srs.review(card, STATE_NEW, 0, None, correct=True, now=now)
+    fsrs = upd.fsrs
+    # Simulate a Mongo round-trip: BSON dates come back naive (UTC, no tzinfo)
+    fsrs = {
+        k: (v.replace(tzinfo=None) if isinstance(v, datetime) else v)
+        for k, v in fsrs.items()
+    }
+    assert fsrs["last_review"] is not None and fsrs["last_review"].tzinfo is None
+
+    # Second review with an aware `now` used to crash; now it must work.
+    upd2 = srs.review(
+        fsrs,
+        upd.my_state,
+        upd.consecutive_successes_at_review,
+        upd.first_reached_review_at,
+        correct=False,
+        now=now + timedelta(days=2),
+    )
+    assert upd2.my_state in (STATE_LEARNING, STATE_REVIEW)
+
+
 def test_consecutive_counter_only_increments_in_review(srs: SrsService) -> None:
     now = _now()
     card = srs.new_card_dict(now)

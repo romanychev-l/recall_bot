@@ -28,5 +28,7 @@ class Settings(BaseSettings):
 
 config_settings = Settings()
 
-mongo_client = AsyncMongoClient(config_settings.mongo_uri)
+# tz_aware=True so datetimes read back from Mongo are tz-aware UTC, matching the
+# tz-aware datetimes used throughout the app (avoids naive/aware mix errors).
+mongo_client = AsyncMongoClient(config_settings.mongo_uri, tz_aware=True)
 db = mongo_client[config_settings.MONGO_DB_NAME]

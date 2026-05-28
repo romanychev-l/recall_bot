@@ -38,6 +38,18 @@ def _card_to_doc(card: Card) -> dict[str, Any]:
     }
 
 
+def _ensure_utc(value: Optional[datetime]) -> Optional[datetime]:
+    """Coerce a datetime to tz-aware UTC.
+
+    Mongo returns naive (UTC) datetimes on read-back; FSRS and the rest of the
+    app work with tz-aware datetimes, so mixing them raises
+    ``TypeError: can't subtract offset-naive and offset-aware datetimes``.
+    """
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 def _card_from_doc(doc: dict[str, Any]) -> Card:
     due = doc.get("due")
     last_review = doc.get("last_review")
@@ -45,6 +57,8 @@ def _card_from_doc(doc: dict[str, Any]) -> Card:
         due = datetime.fromisoformat(due)
     if isinstance(last_review, str):
         last_review = datetime.fromisoformat(last_review)
+    due = _ensure_utc(due)
+    last_review = _ensure_utc(last_review)
     state = doc.get("state")
     if isinstance(state, int):
         state = State(state)
@@ -137,8 +151,8 @@ class SrsService:
 
 def card_due(fsrs_state: dict[str, Any]) -> datetime:
     due = fsrs_state.get("due")
-    if isinstance(due, datetime):
-        return due
     if isinstance(due, str):
-        return datetime.fromisoformat(due)
+        due = datetime.fromisoformat(due)
+    if isinstance(due, datetime):
+        return _ensure_utc(due)
     return datetime.now(timezone.utc)

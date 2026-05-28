@@ -79,11 +79,26 @@ english,translation,frequency_rank,pos,example,is_phrasal
 - `data/fixtures/test_words.csv` — 50 слов для smoke-теста.
 - `data/phrasal_verbs.csv` — стартовый набор фразовых глаголов, легко расширить до 500.
 - `data/easy_english_expressions.csv` — 1165 разговорных выражений и идиом из подкаста *Daily Easy English* (Coach Shane), `frequency_rank` 30001+.
+- `data/basic_english.csv` — 847 слов из Basic English Ч.К. Огдена (100 операций, 600 существительных, 150 прилагательных). Эти же слова влиты в `dictionary.csv` под ранги `1..847`, чтобы подкидываться первыми.
 
 Залить дополнительный набор в БД:
 
 ```bash
 python -m data.seed data/easy_english_expressions.csv
+```
+
+### Пересев после переранжирования
+
+Сидер апсёртит записи по `frequency_rank`. Поскольку Basic English занял ранги `1..847`, а остальные слова сдвинулись на `848+`, на **уже засеянной** БД простой пересев создаст дубли и устаревшие записи. Перед пересевом нужно очистить коллекцию `words`:
+
+```bash
+# очистить коллекцию слов (БД recall_bot, коллекция words)
+mongosh recall_bot --eval 'db.words.drop()'
+
+# затем пересеять заново
+make seed-full        # локально (uv)
+# или в docker:
+make seed-docker
 ```
 
 Для сборки полного словаря на 20 000+ записей из открытых источников:

@@ -1,0 +1,848 @@
+english,translation,frequency_rank,pos,example,is_phrasal
+come,приходить; приезжать; наступать,1,verb,,false
+get,получать; добывать; становиться,2,verb,,false
+give,давать; дарить; предоставлять,3,verb,,false
+go,идти; ехать; уходить,4,verb,,false
+keep,держать; хранить; сохранять,5,verb,,false
+let,позволять; пускать; давать,6,verb,,false
+make,делать; изготавливать; заставлять,7,verb,,false
+put,класть; ставить; помещать,8,verb,,false
+seem,казаться; представляться,9,verb,,false
+take,брать; взять; принимать,10,verb,,false
+be,быть; являться; находиться,11,verb,,false
+do,делать; выполнять,12,verb,,false
+have,иметь; обладать,13,verb,,false
+say,говорить; сказать,14,verb,,false
+see,видеть; понимать,15,verb,,false
+send,посылать; отправлять,16,verb,,false
+may,мочь; может быть,17,modal,,false
+will,будет; буду (будущее время),18,modal,,false
+about,о; около; приблизительно,19,prep,,false
+across,через; поперёк,20,prep,,false
+after,после; за,21,prep,,false
+against,против; о,22,prep,,false
+among,среди; между,23,prep,,false
+at,в; у; на,24,prep,,false
+before,перед; до,25,prep,,false
+between,между,26,prep,,false
+by,к; около; посредством,27,prep,,false
+down,вниз; внизу,28,prep,,false
+from,из; от,29,prep,,false
+in,в; внутри,30,prep,,false
+off,с; от; прочь,31,prep,,false
+on,на; в,32,prep,,false
+over,над; через; сверх,33,prep,,false
+through,через; сквозь,34,prep,,false
+to,к; до,35,prep,,false
+under,под,36,prep,,false
+up,вверх; наверх,37,prep,,false
+with,с; вместе с,38,prep,,false
+as,как; в качестве; поскольку,39,conj,,false
+for,для; ради; за,40,prep,,false
+of,из; от; о,41,prep,,false
+till,до; пока не,42,prep,,false
+than,чем,43,conj,,false
+a,(неопределённый артикль),44,det,,false
+the,(определённый артикль),45,det,,false
+all,весь; все; всё,46,det,,false
+any,любой; какой-нибудь,47,det,,false
+every,каждый; всякий,48,det,,false
+little,маленький; немного,49,det,,false
+much,много,50,det,,false
+no,нет; никакой,51,det,,false
+other,другой; иной,52,det,,false
+some,некоторый; несколько,53,det,,false
+such,такой,54,det,,false
+that,тот; этот; что,55,det,,false
+this,этот,56,det,,false
+i,я,57,pron,,false
+he,он,58,pron,,false
+you,ты; вы,59,pron,,false
+who,кто; который,60,pron,,false
+and,и; а,61,conj,,false
+because,потому что; так как,62,conj,,false
+but,но; а,63,conj,,false
+or,или,64,conj,,false
+if,если,65,conj,,false
+though,хотя; несмотря на,66,conj,,false
+while,пока; в то время как,67,conj,,false
+how,как; каким образом,68,adv,,false
+when,когда,69,adv,,false
+where,где; куда,70,adv,,false
+why,почему; зачем,71,adv,,false
+again,снова; опять,72,adv,,false
+ever,когда-либо; всегда,73,adv,,false
+far,далеко; намного,74,adv,,false
+forward,вперёд,75,adv,,false
+here,здесь; сюда,76,adv,,false
+near,близко; рядом,77,adv,,false
+now,сейчас; теперь,78,adv,,false
+out,наружу; вне,79,adv,,false
+still,всё ещё; тихо,80,adv,,false
+then,тогда; затем,81,adv,,false
+there,там; туда,82,adv,,false
+together,вместе,83,adv,,false
+well,хорошо; колодец,84,adv,,false
+almost,почти,85,adv,,false
+enough,достаточно,86,adv,,false
+even,даже; ровный,87,adv,,false
+not,не; нет,88,adv,,false
+only,только; лишь,89,adv,,false
+quite,вполне; довольно,90,adv,,false
+so,так; настолько,91,adv,,false
+very,очень,92,adv,,false
+tomorrow,завтра,93,adv,,false
+yesterday,вчера,94,adv,,false
+north,север,95,noun,,false
+south,юг,96,noun,,false
+east,восток,97,noun,,false
+west,запад,98,noun,,false
+please,пожалуйста,99,interj,,false
+yes,да,100,interj,,false
+account,счёт; отчёт; учёт,101,noun,,false
+act,действие; поступок; акт,102,noun,,false
+addition,сложение; добавление; прибавление,103,noun,,false
+adjustment,регулировка; настройка; корректировка,104,noun,,false
+advertisement,объявление; реклама,105,noun,,false
+agreement,соглашение; согласие; договор,106,noun,,false
+air,воздух; вид,107,noun,,false
+amount,количество; сумма,108,noun,,false
+amusement,развлечение; забава,109,noun,,false
+animal,животное; зверь,110,noun,,false
+answer,ответ; отклик,111,noun,,false
+apparatus,аппарат; прибор; устройство,112,noun,,false
+approval,одобрение; утверждение,113,noun,,false
+argument,спор; довод; аргумент,114,noun,,false
+art,искусство; мастерство,115,noun,,false
+attack,атака; нападение; приступ,116,noun,,false
+attempt,попытка; покушение,117,noun,,false
+attention,внимание; забота,118,noun,,false
+attraction,притяжение; привлекательность,119,noun,,false
+authority,власть; полномочия; авторитет,120,noun,,false
+back,спина; задняя часть,121,noun,,false
+balance,баланс; равновесие; весы,122,noun,,false
+base,основа; база; основание,123,noun,,false
+behavior,поведение,124,noun,,false
+belief,вера; убеждение; мнение,125,noun,,false
+birth,рождение; происхождение,126,noun,,false
+bit,кусочек; частица; немного,127,noun,,false
+bite,укус; кусок; клёв,128,noun,,false
+blood,кровь,129,noun,,false
+blow,удар; дуновение,130,noun,,false
+body,тело; туловище; орган,131,noun,,false
+brass,латунь; медь,132,noun,,false
+bread,хлеб,133,noun,,false
+breath,дыхание; вздох,134,noun,,false
+brother,брат,135,noun,,false
+building,здание; строение; постройка,136,noun,,false
+burn,ожог; жжение,137,noun,,false
+burst,взрыв; вспышка; разрыв,138,noun,,false
+business,дело; бизнес; занятие,139,noun,,false
+butter,масло; сливочное масло,140,noun,,false
+canvas,холст; парусина; брезент,141,noun,,false
+care,забота; уход; внимание,142,noun,,false
+cause,причина; повод; дело,143,noun,,false
+chalk,мел,144,noun,,false
+chance,шанс; случай; возможность,145,noun,,false
+change,изменение; перемена; сдача,146,noun,,false
+cloth,ткань; материя; сукно,147,noun,,false
+coal,уголь,148,noun,,false
+color,цвет; окраска,149,noun,,false
+comfort,комфорт; удобство; утешение,150,noun,,false
+committee,комитет; комиссия,151,noun,,false
+company,компания; общество; фирма,152,noun,,false
+comparison,сравнение,153,noun,,false
+competition,соревнование; конкуренция; конкурс,154,noun,,false
+condition,условие; состояние,155,noun,,false
+connection,связь; соединение; подключение,156,noun,,false
+control,контроль; управление,157,noun,,false
+cook,повар; кухарка,158,noun,,false
+copper,медь,159,noun,,false
+copy,копия; экземпляр,160,noun,,false
+cork,пробка; кора,161,noun,,false
+cotton,хлопок; вата,162,noun,,false
+cough,кашель,163,noun,,false
+country,страна; деревня; местность,164,noun,,false
+cover,крышка; покрытие; обложка,165,noun,,false
+crack,трещина; щель; треск,166,noun,,false
+credit,кредит; доверие; заслуга,167,noun,,false
+crime,преступление,168,noun,,false
+crush,раздавливание; давка; толпа,169,noun,,false
+cry,крик; плач,170,noun,,false
+current,поток; течение; ток,171,noun,,false
+curve,кривая; изгиб; поворот,172,noun,,false
+damage,повреждение; ущерб; вред,173,noun,,false
+danger,опасность,174,noun,,false
+daughter,дочь,175,noun,,false
+day,день,176,noun,,false
+death,смерть; гибель,177,noun,,false
+debt,долг; задолженность,178,noun,,false
+decision,решение,179,noun,,false
+degree,степень; градус; уровень,180,noun,,false
+design,дизайн; замысел; проект,181,noun,,false
+desire,желание; стремление,182,noun,,false
+destruction,разрушение; уничтожение,183,noun,,false
+detail,деталь; подробность,184,noun,,false
+development,развитие; разработка,185,noun,,false
+digestion,пищеварение,186,noun,,false
+direction,направление; указание,187,noun,,false
+discovery,открытие; обнаружение,188,noun,,false
+discussion,обсуждение; дискуссия,189,noun,,false
+disease,болезнь; заболевание,190,noun,,false
+disgust,отвращение; омерзение,191,noun,,false
+distance,расстояние; дистанция,192,noun,,false
+distribution,распределение; распространение,193,noun,,false
+division,деление; разделение; отдел,194,noun,,false
+doubt,сомнение,195,noun,,false
+drink,напиток; питьё; глоток,196,noun,,false
+driving,вождение; езда,197,noun,,false
+dust,пыль; прах,198,noun,,false
+earth,земля; почва; мир,199,noun,,false
+edge,край; кромка; лезвие,200,noun,,false
+education,образование; воспитание,201,noun,,false
+effect,эффект; следствие; воздействие,202,noun,,false
+end,конец; окончание; цель,203,noun,,false
+error,ошибка; заблуждение,204,noun,,false
+event,событие; случай,205,noun,,false
+example,пример; образец,206,noun,,false
+exchange,обмен; биржа,207,noun,,false
+existence,существование; бытие,208,noun,,false
+expansion,расширение; экспансия,209,noun,,false
+experience,опыт; переживание,210,noun,,false
+expert,эксперт; специалист,211,noun,,false
+fact,факт,212,noun,,false
+fall,падение; осень,213,noun,,false
+family,семья,214,noun,,false
+father,отец,215,noun,,false
+fear,страх; боязнь,216,noun,,false
+feeling,чувство; ощущение,217,noun,,false
+fiction,художественная литература; вымысел,218,noun,,false
+field,поле,219,noun,,false
+fight,бой; драка; борьба,220,noun,,false
+fire,огонь; пожар,221,noun,,false
+flame,пламя,222,noun,,false
+flight,полёт; бегство,223,noun,,false
+flower,цветок,224,noun,,false
+fold,складка; сгиб,225,noun,,false
+food,еда; пища,226,noun,,false
+force,сила,227,noun,,false
+form,форма; вид,228,noun,,false
+friend,друг,229,noun,,false
+front,перёд; передняя часть; фронт,230,noun,,false
+fruit,фрукт; плод,231,noun,,false
+glass,стекло; стакан,232,noun,,false
+gold,золото,233,noun,,false
+government,правительство,234,noun,,false
+grain,зерно; крупа,235,noun,,false
+grass,трава,236,noun,,false
+grip,хватка; захват,237,noun,,false
+group,группа,238,noun,,false
+growth,рост,239,noun,,false
+guide,гид; проводник; путеводитель,240,noun,,false
+harbor,гавань; порт,241,noun,,false
+harmony,гармония; согласие,242,noun,,false
+hate,ненависть,243,noun,,false
+hearing,слух; слушание,244,noun,,false
+heat,жара; тепло,245,noun,,false
+help,помощь,246,noun,,false
+history,история,247,noun,,false
+hole,дыра; отверстие,248,noun,,false
+hope,надежда,249,noun,,false
+hour,час,250,noun,,false
+humor,юмор,251,noun,,false
+ice,лёд,252,noun,,false
+idea,идея; мысль,253,noun,,false
+impulse,импульс; порыв,254,noun,,false
+increase,увеличение; рост,255,noun,,false
+industry,промышленность; индустрия,256,noun,,false
+ink,чернила,257,noun,,false
+insect,насекомое,258,noun,,false
+instrument,инструмент; прибор,259,noun,,false
+insurance,страхование,260,noun,,false
+interest,интерес; проценты,261,noun,,false
+invention,изобретение,262,noun,,false
+iron,железо; утюг,263,noun,,false
+jelly,желе,264,noun,,false
+join,соединение; стык,265,noun,,false
+journey,путешествие; поездка,266,noun,,false
+judge,судья,267,noun,,false
+jump,прыжок,268,noun,,false
+kick,удар; пинок,269,noun,,false
+kiss,поцелуй,270,noun,,false
+knowledge,знание; знания,271,noun,,false
+land,земля; суша; страна,272,noun,,false
+language,язык,273,noun,,false
+laugh,смех,274,noun,,false
+law,закон; право,275,noun,,false
+lead,свинец,276,noun,,false
+learning,учёба; обучение,277,noun,,false
+leather,кожа,278,noun,,false
+letter,письмо; буква,279,noun,,false
+level,уровень,280,noun,,false
+lift,лифт; подъём,281,noun,,false
+light,свет,282,noun,,false
+limit,предел; ограничение,283,noun,,false
+linen,льняное полотно; бельё,284,noun,,false
+liquid,жидкость,285,noun,,false
+list,список,286,noun,,false
+look,взгляд; вид,287,noun,,false
+loss,потеря; убыток,288,noun,,false
+love,любовь,289,noun,,false
+machine,машина; механизм,290,noun,,false
+man,мужчина; человек,291,noun,,false
+manager,менеджер; управляющий,292,noun,,false
+mark,знак; отметка; след,293,noun,,false
+market,рынок,294,noun,,false
+mass,масса; множество,295,noun,,false
+meal,еда; приём пищи,296,noun,,false
+measure,мера; измерение; такт,297,noun,,false
+meat,мясо,298,noun,,false
+meeting,встреча; собрание,299,noun,,false
+memory,память; воспоминание,300,noun,,false
+metal,металл,301,noun,,false
+middle,середина,302,noun,,false
+milk,молоко,303,noun,,false
+mind,ум; разум; сознание,304,noun,,false
+mine,шахта; рудник; мина,305,noun,,false
+minute,минута,306,noun,,false
+mist,туман; дымка,307,noun,,false
+money,деньги,308,noun,,false
+month,месяц,309,noun,,false
+morning,утро,310,noun,,false
+mother,мать,311,noun,,false
+motion,движение,312,noun,,false
+mountain,гора,313,noun,,false
+move,движение; ход,314,noun,,false
+music,музыка,315,noun,,false
+name,имя; название,316,noun,,false
+nation,нация; народ,317,noun,,false
+need,потребность; нужда,318,noun,,false
+news,новости; известие,319,noun,,false
+night,ночь,320,noun,,false
+noise,шум,321,noun,,false
+note,заметка; нота; записка,322,noun,,false
+number,число; номер; количество,323,noun,,false
+observation,наблюдение; замечание,324,noun,,false
+offer,предложение,325,noun,,false
+oil,масло; нефть,326,noun,,false
+operation,операция; действие,327,noun,,false
+opinion,мнение,328,noun,,false
+order,порядок; приказ; заказ,329,noun,,false
+organization,организация,330,noun,,false
+ornament,украшение; орнамент,331,noun,,false
+owner,владелец; хозяин,332,noun,,false
+page,страница,333,noun,,false
+pain,боль,334,noun,,false
+paint,краска,335,noun,,false
+paper,бумага,336,noun,,false
+part,часть,337,noun,,false
+paste,паста; клейстер,338,noun,,false
+payment,платёж; оплата,339,noun,,false
+peace,мир; покой,340,noun,,false
+person,человек; личность,341,noun,,false
+place,место,342,noun,,false
+plant,растение; завод,343,noun,,false
+play,игра; пьеса,344,noun,,false
+pleasure,удовольствие,345,noun,,false
+point,точка; пункт; остриё,346,noun,,false
+poison,яд,347,noun,,false
+polish,полировка; глянец,348,noun,,false
+porter,носильщик; швейцар,349,noun,,false
+position,позиция; положение,350,noun,,false
+powder,порошок; пудра,351,noun,,false
+power,сила; власть; мощность,352,noun,,false
+price,цена,353,noun,,false
+print,печать; оттиск,354,noun,,false
+process,процесс,355,noun,,false
+produce,продукция; продукты,356,noun,,false
+profit,прибыль; выгода,357,noun,,false
+property,собственность; имущество,358,noun,,false
+prose,проза,359,noun,,false
+protest,протест,360,noun,,false
+pull,тяга; рывок,361,noun,,false
+punishment,наказание,362,noun,,false
+purpose,цель; намерение,363,noun,,false
+push,толчок; нажим,364,noun,,false
+quality,качество,365,noun,,false
+question,вопрос,366,noun,,false
+rain,дождь,367,noun,,false
+range,диапазон; ряд; предел,368,noun,,false
+rate,скорость; темп; ставка,369,noun,,false
+ray,луч,370,noun,,false
+reaction,реакция,371,noun,,false
+reading,чтение,372,noun,,false
+reason,причина; разум; рассудок,373,noun,,false
+record,запись; рекорд,374,noun,,false
+regret,сожаление,375,noun,,false
+relation,отношение; родство,376,noun,,false
+religion,религия,377,noun,,false
+representative,представитель,378,noun,,false
+request,просьба; запрос,379,noun,,false
+respect,уважение; отношение,380,noun,,false
+rest,отдых; покой; остаток,381,noun,,false
+reward,награда; вознаграждение,382,noun,,false
+rhythm,ритм,383,noun,,false
+rice,рис,384,noun,,false
+river,река,385,noun,,false
+road,дорога,386,noun,,false
+roll,рулон; свёрток; крен,387,noun,,false
+room,комната; место,388,noun,,false
+rub,трение; натирание,389,noun,,false
+rule,правило; устав,390,noun,,false
+run,бег; пробег,391,noun,,false
+salt,соль,392,noun,,false
+sand,песок,393,noun,,false
+scale,шкала; масштаб; весы,394,noun,,false
+science,наука,395,noun,,false
+sea,море,396,noun,,false
+seat,сиденье; место,397,noun,,false
+secretary,секретарь,398,noun,,false
+selection,выбор; отбор,399,noun,,false
+self,сам; своё я,400,noun,,false
+sense,чувство; смысл,401,noun,,false
+servant,слуга,402,noun,,false
+sex,пол,403,noun,,false
+shade,тень; оттенок,404,noun,,false
+shake,тряска; встряхивание,405,noun,,false
+shame,стыд; позор,406,noun,,false
+shock,удар; потрясение; шок,407,noun,,false
+side,сторона; бок,408,noun,,false
+sign,знак; признак,409,noun,,false
+silk,шёлк,410,noun,,false
+silver,серебро,411,noun,,false
+sister,сестра,412,noun,,false
+size,размер,413,noun,,false
+sky,небо,414,noun,,false
+sleep,сон,415,noun,,false
+slip,скольжение; ошибка,416,noun,,false
+slope,склон; уклон,417,noun,,false
+smash,грохот; столкновение,418,noun,,false
+smell,запах; обоняние,419,noun,,false
+smile,улыбка,420,noun,,false
+smoke,дым,421,noun,,false
+sneeze,чихание,422,noun,,false
+snow,снег,423,noun,,false
+soap,мыло,424,noun,,false
+society,общество,425,noun,,false
+son,сын,426,noun,,false
+song,песня,427,noun,,false
+sort,сорт; вид; разновидность,428,noun,,false
+sound,звук,429,noun,,false
+soup,суп,430,noun,,false
+space,пространство; место,431,noun,,false
+stage,сцена; этап; стадия,432,noun,,false
+start,начало; старт,433,noun,,false
+statement,утверждение; заявление,434,noun,,false
+steam,пар,435,noun,,false
+steel,сталь,436,noun,,false
+step,шаг; ступень,437,noun,,false
+stitch,стежок; шов,438,noun,,false
+stone,камень,439,noun,,false
+stop,остановка; стоп,440,noun,,false
+story,рассказ; история,441,noun,,false
+stretch,растяжение; участок; отрезок,442,noun,,false
+structure,структура; строение,443,noun,,false
+substance,вещество; субстанция,444,noun,,false
+sugar,сахар,445,noun,,false
+suggestion,предложение; совет,446,noun,,false
+summer,лето,447,noun,,false
+support,поддержка; опора,448,noun,,false
+surprise,удивление; сюрприз,449,noun,,false
+swim,плавание; заплыв,450,noun,,false
+system,система,451,noun,,false
+talk,разговор; беседа,452,noun,,false
+taste,вкус,453,noun,,false
+tax,налог,454,noun,,false
+teaching,обучение; преподавание,455,noun,,false
+tendency,тенденция; склонность,456,noun,,false
+test,тест; проверка; испытание,457,noun,,false
+theory,теория,458,noun,,false
+thing,вещь; предмет,459,noun,,false
+thought,мысль; мышление,460,noun,,false
+thunder,гром,461,noun,,false
+time,время,462,noun,,false
+tin,олово; жесть,463,noun,,false
+top,верх; вершина; макушка,464,noun,,false
+touch,прикосновение; касание,465,noun,,false
+trade,торговля; ремесло,466,noun,,false
+transport,транспорт; перевозка,467,noun,,false
+trick,трюк; уловка; фокус,468,noun,,false
+trouble,проблема; неприятность; беспокойство,469,noun,,false
+turn,поворот; очередь,470,noun,,false
+twist,поворот; изгиб; скручивание,471,noun,,false
+unit,единица; блок,472,noun,,false
+use,использование; польза; применение,473,noun,,false
+value,ценность; стоимость; значение,474,noun,,false
+verse,стих; строфа,475,noun,,false
+vessel,сосуд; судно,476,noun,,false
+view,вид; взгляд; мнение,477,noun,,false
+voice,голос,478,noun,,false
+walk,прогулка; ходьба,479,noun,,false
+war,война,480,noun,,false
+wash,мытьё; стирка,481,noun,,false
+waste,отходы; трата; потеря,482,noun,,false
+water,вода,483,noun,,false
+wave,волна,484,noun,,false
+wax,воск,485,noun,,false
+way,путь; дорога; способ,486,noun,,false
+weather,погода,487,noun,,false
+week,неделя,488,noun,,false
+weight,вес; тяжесть; груз,489,noun,,false
+wind,ветер,490,noun,,false
+wine,вино,491,noun,,false
+winter,зима,492,noun,,false
+woman,женщина,493,noun,,false
+wood,дерево; древесина,494,noun,,false
+wool,шерсть,495,noun,,false
+work,работа; труд,496,noun,,false
+wound,рана,497,noun,,false
+writing,письмо; написание; почерк,498,noun,,false
+year,год,499,noun,,false
+angle,угол,500,noun,,false
+ant,муравей,501,noun,,false
+apple,яблоко,502,noun,,false
+arch,арка; свод,503,noun,,false
+arm,рука,504,noun,,false
+army,армия; войско,505,noun,,false
+baby,малыш; ребёнок; младенец,506,noun,,false
+bag,сумка; мешок,507,noun,,false
+ball,мяч; шар,508,noun,,false
+band,группа; банда; лента,509,noun,,false
+basin,таз; миска,510,noun,,false
+basket,корзина,511,noun,,false
+bath,ванна; купание,512,noun,,false
+bed,кровать; постель,513,noun,,false
+bee,пчела,514,noun,,false
+bell,колокол; звонок,515,noun,,false
+berry,ягода,516,noun,,false
+bird,птица,517,noun,,false
+blade,лезвие; клинок,518,noun,,false
+board,доска; правление,519,noun,,false
+boat,лодка; судно,520,noun,,false
+bone,кость,521,noun,,false
+book,книга,522,noun,,false
+boot,ботинок; сапог,523,noun,,false
+bottle,бутылка,524,noun,,false
+box,коробка; ящик,525,noun,,false
+boy,мальчик,526,noun,,false
+brain,мозг; ум,527,noun,,false
+brake,тормоз,528,noun,,false
+branch,ветвь; ветка; филиал,529,noun,,false
+brick,кирпич,530,noun,,false
+bridge,мост,531,noun,,false
+brush,щётка; кисть,532,noun,,false
+bucket,ведро,533,noun,,false
+bulb,луковица; лампочка,534,noun,,false
+button,пуговица; кнопка,535,noun,,false
+cake,торт; пирожное; кекс,536,noun,,false
+camera,камера; фотоаппарат,537,noun,,false
+card,карта; карточка; открытка,538,noun,,false
+cart,телега; тележка,539,noun,,false
+carriage,карета; экипаж; вагон,540,noun,,false
+cat,кот; кошка,541,noun,,false
+chain,цепь; цепочка,542,noun,,false
+cheese,сыр,543,noun,,false
+chest,грудь; сундук,544,noun,,false
+chin,подбородок,545,noun,,false
+church,церковь,546,noun,,false
+circle,круг; окружность,547,noun,,false
+clock,часы,548,noun,,false
+cloud,облако; туча,549,noun,,false
+coat,пальто; шерсть,550,noun,,false
+collar,воротник; ошейник,551,noun,,false
+comb,расчёска; гребень,552,noun,,false
+cord,шнур; верёвка,553,noun,,false
+cow,корова,554,noun,,false
+cup,чашка; кубок,555,noun,,false
+curtain,занавеска; штора,556,noun,,false
+cushion,подушка,557,noun,,false
+dog,собака; пёс,558,noun,,false
+door,дверь,559,noun,,false
+drain,слив; дренаж; сток,560,noun,,false
+drawer,ящик; выдвижной ящик,561,noun,,false
+dress,платье; одежда,562,noun,,false
+drop,капля,563,noun,,false
+ear,ухо,564,noun,,false
+egg,яйцо,565,noun,,false
+engine,двигатель; мотор,566,noun,,false
+eye,глаз,567,noun,,false
+face,лицо,568,noun,,false
+farm,ферма,569,noun,,false
+feather,перо; перышко,570,noun,,false
+finger,палец,571,noun,,false
+fish,рыба,572,noun,,false
+flag,флаг; знамя,573,noun,,false
+floor,пол; этаж,574,noun,,false
+fly,муха,575,noun,,false
+foot,нога; ступня,576,noun,,false
+fork,вилка,577,noun,,false
+fowl,птица; домашняя птица,578,noun,,false
+frame,рама; каркас; кадр,579,noun,,false
+garden,сад,580,noun,,false
+girl,девочка; девушка,581,noun,,false
+glove,перчатка,582,noun,,false
+goat,коза; козёл,583,noun,,false
+gun,ружьё; пушка; пистолет,584,noun,,false
+hair,волосы; волос,585,noun,,false
+hammer,молоток,586,noun,,false
+hand,рука; кисть,587,noun,,false
+hat,шляпа; шапка,588,noun,,false
+head,голова,589,noun,,false
+heart,сердце,590,noun,,false
+hook,крючок,591,noun,,false
+horn,рог; гудок,592,noun,,false
+horse,лошадь; конь,593,noun,,false
+hospital,больница,594,noun,,false
+house,дом,595,noun,,false
+island,остров,596,noun,,false
+jewel,драгоценный камень; драгоценность,597,noun,,false
+kettle,чайник,598,noun,,false
+key,ключ,599,noun,,false
+knee,колено,600,noun,,false
+knife,нож,601,noun,,false
+knot,узел,602,noun,,false
+leaf,лист,603,noun,,false
+leg,нога,604,noun,,false
+library,библиотека,605,noun,,false
+line,линия; строка; черта,606,noun,,false
+lip,губа,607,noun,,false
+lock,замок; запор,608,noun,,false
+map,карта,609,noun,,false
+match,спичка; матч; пара,610,noun,,false
+monkey,обезьяна,611,noun,,false
+moon,луна,612,noun,,false
+mouth,рот,613,noun,,false
+muscle,мышца; мускул,614,noun,,false
+nail,гвоздь; ноготь,615,noun,,false
+neck,шея,616,noun,,false
+needle,игла; иголка,617,noun,,false
+nerve,нерв,618,noun,,false
+net,сеть; сетка,619,noun,,false
+nose,нос,620,noun,,false
+nut,орех; гайка,621,noun,,false
+office,офис; контора; учреждение,622,noun,,false
+orange,апельсин; оранжевый цвет,623,noun,,false
+oven,печь; духовка,624,noun,,false
+parcel,посылка; свёрток,625,noun,,false
+pen,ручка; перо,626,noun,,false
+pencil,карандаш,627,noun,,false
+pig,свинья,628,noun,,false
+pin,булавка; штифт,629,noun,,false
+pipe,труба; трубка,630,noun,,false
+plane,самолёт; плоскость; рубанок,631,noun,,false
+plate,тарелка; пластина,632,noun,,false
+plough,плуг,633,noun,,false
+pocket,карман,634,noun,,false
+pot,горшок; кастрюля,635,noun,,false
+potato,картофель; картошка,636,noun,,false
+prison,тюрьма,637,noun,,false
+pump,насос; помпа,638,noun,,false
+rail,рельс; перила,639,noun,,false
+rat,крыса,640,noun,,false
+receipt,квитанция; чек,641,noun,,false
+ring,кольцо; круг,642,noun,,false
+rod,прут; стержень,643,noun,,false
+roof,крыша,644,noun,,false
+root,корень,645,noun,,false
+sail,парус,646,noun,,false
+school,школа,647,noun,,false
+scissors,ножницы,648,noun,,false
+screw,винт; шуруп,649,noun,,false
+seed,семя; семена,650,noun,,false
+sheep,овца; баран,651,noun,,false
+shelf,полка,652,noun,,false
+ship,корабль; судно,653,noun,,false
+shirt,рубашка; сорочка,654,noun,,false
+shoe,туфля; ботинок,655,noun,,false
+skin,кожа,656,noun,,false
+skirt,юбка,657,noun,,false
+snake,змея,658,noun,,false
+sock,носок,659,noun,,false
+spade,лопата,660,noun,,false
+sponge,губка,661,noun,,false
+spoon,ложка,662,noun,,false
+spring,пружина; родник; весна,663,noun,,false
+square,квадрат; площадь,664,noun,,false
+stamp,марка; штамп,665,noun,,false
+star,звезда,666,noun,,false
+station,станция; вокзал,667,noun,,false
+stem,стебель; ствол,668,noun,,false
+stick,палка; трость,669,noun,,false
+stocking,чулок,670,noun,,false
+stomach,желудок; живот,671,noun,,false
+store,магазин; запас,672,noun,,false
+street,улица,673,noun,,false
+sun,солнце,674,noun,,false
+table,стол; таблица,675,noun,,false
+tail,хвост,676,noun,,false
+thread,нить; нитка,677,noun,,false
+throat,горло; глотка,678,noun,,false
+thumb,большой палец,679,noun,,false
+ticket,билет,680,noun,,false
+toe,палец ноги,681,noun,,false
+tongue,язык,682,noun,,false
+tooth,зуб,683,noun,,false
+town,город,684,noun,,false
+train,поезд,685,noun,,false
+tray,поднос; лоток,686,noun,,false
+tree,дерево,687,noun,,false
+trousers,брюки; штаны,688,noun,,false
+umbrella,зонт,689,noun,,false
+wall,стена,690,noun,,false
+watch,часы,691,noun,,false
+wheel,колесо,692,noun,,false
+whip,кнут; плеть,693,noun,,false
+whistle,свисток; свист,694,noun,,false
+window,окно,695,noun,,false
+wing,крыло,696,noun,,false
+wire,проволока; провод,697,noun,,false
+worm,червь; червяк,698,noun,,false
+able,способный; умелый,699,adj,,false
+acid,кислотный; кислый,700,adj,,false
+angry,сердитый; злой,701,adj,,false
+automatic,автоматический,702,adj,,false
+beautiful,красивый; прекрасный,703,adj,,false
+black,чёрный,704,adj,,false
+boiling,кипящий,705,adj,,false
+bright,яркий; светлый,706,adj,,false
+broken,сломанный; разбитый,707,adj,,false
+brown,коричневый,708,adj,,false
+cheap,дешёвый,709,adj,,false
+chemical,химический,710,adj,,false
+chief,главный; основной,711,adj,,false
+clean,чистый,712,adj,,false
+clear,ясный; прозрачный,713,adj,,false
+common,общий; распространённый,714,adj,,false
+complex,сложный; комплексный,715,adj,,false
+conscious,сознательный; осознающий,716,adj,,false
+cut,порезанный; разрезанный,717,adj,,false
+deep,глубокий,718,adj,,false
+dependent,зависимый,719,adj,,false
+early,ранний,720,adj,,false
+elastic,эластичный; упругий,721,adj,,false
+electric,электрический,722,adj,,false
+equal,равный; одинаковый,723,adj,,false
+fat,толстый; жирный,724,adj,,false
+fertile,плодородный; плодовитый,725,adj,,false
+first,первый,726,adj,,false
+fixed,закреплённый; фиксированный,727,adj,,false
+flat,плоский; ровный,728,adj,,false
+free,свободный; бесплатный,729,adj,,false
+frequent,частый,730,adj,,false
+full,полный,731,adj,,false
+good,хороший; добрый,732,adj,,false
+great,великий; большой,733,adj,,false
+grey,серый,734,adj,,false
+hanging,висящий; подвесной,735,adj,,false
+happy,счастливый; довольный,736,adj,,false
+hard,твёрдый; трудный,737,adj,,false
+healthy,здоровый,738,adj,,false
+high,высокий,739,adj,,false
+hollow,полый; пустотелый,740,adj,,false
+important,важный; значимый,741,adj,,false
+kind,добрый; любезный,742,adj,,false
+like,похожий; подобный,743,adj,,false
+living,живой; живущий,744,adj,,false
+long,длинный; долгий,745,adj,,false
+male,мужской; самец,746,adj,,false
+married,женатый; замужняя,747,adj,,false
+material,материальный; вещественный,748,adj,,false
+medical,медицинский,749,adj,,false
+military,военный,750,adj,,false
+natural,природный; естественный,751,adj,,false
+necessary,необходимый; нужный,752,adj,,false
+new,новый,753,adj,,false
+normal,нормальный; обычный,754,adj,,false
+open,открытый,755,adj,,false
+parallel,параллельный,756,adj,,false
+past,прошлый; прошедший,757,adj,,false
+physical,физический; телесный,758,adj,,false
+political,политический,759,adj,,false
+poor,бедный; плохой,760,adj,,false
+possible,возможный,761,adj,,false
+present,настоящий; присутствующий,762,adj,,false
+private,частный; личный,763,adj,,false
+probable,вероятный,764,adj,,false
+quick,быстрый; скорый,765,adj,,false
+quiet,тихий; спокойный,766,adj,,false
+ready,готовый,767,adj,,false
+red,красный,768,adj,,false
+regular,регулярный; обычный,769,adj,,false
+responsible,ответственный,770,adj,,false
+right,правильный; правый,771,adj,,false
+round,круглый,772,adj,,false
+same,тот же; одинаковый,773,adj,,false
+second,второй,774,adj,,false
+separate,отдельный; раздельный,775,adj,,false
+serious,серьёзный,776,adj,,false
+sharp,острый; резкий,777,adj,,false
+smooth,гладкий; ровный,778,adj,,false
+sticky,липкий; клейкий,779,adj,,false
+stiff,жёсткий; негибкий,780,adj,,false
+straight,прямой,781,adj,,false
+strong,сильный; крепкий,782,adj,,false
+sudden,внезапный; резкий,783,adj,,false
+sweet,сладкий,784,adj,,false
+tall,высокий; рослый,785,adj,,false
+thick,толстый; густой,786,adj,,false
+tight,тугой; тесный; плотный,787,adj,,false
+tired,усталый; уставший,788,adj,,false
+true,истинный; верный,789,adj,,false
+violent,жестокий; яростный,790,adj,,false
+waiting,ожидающий; в ожидании,791,adj,,false
+warm,тёплый,792,adj,,false
+wet,мокрый; влажный,793,adj,,false
+wide,широкий,794,adj,,false
+wise,мудрый; разумный,795,adj,,false
+yellow,жёлтый,796,adj,,false
+young,молодой,797,adj,,false
+awake,бодрствующий; не спящий,798,adj,,false
+bad,плохой; дурной,799,adj,,false
+bent,согнутый; изогнутый,800,adj,,false
+bitter,горький,801,adj,,false
+blue,синий; голубой,802,adj,,false
+certain,определённый; уверенный,803,adj,,false
+cold,холодный,804,adj,,false
+complete,полный; завершённый,805,adj,,false
+cruel,жестокий,806,adj,,false
+dark,тёмный,807,adj,,false
+dead,мёртвый; неживой,808,adj,,false
+dear,дорогой; милый,809,adj,,false
+delicate,тонкий; деликатный; хрупкий,810,adj,,false
+different,другой; различный,811,adj,,false
+dirty,грязный,812,adj,,false
+dry,сухой,813,adj,,false
+false,ложный; неверный,814,adj,,false
+feeble,слабый; немощный,815,adj,,false
+female,женский; самка,816,adj,,false
+foolish,глупый; неразумный,817,adj,,false
+future,будущий,818,adj,,false
+green,зелёный,819,adj,,false
+ill,больной,820,adj,,false
+last,последний; прошлый,821,adj,,false
+late,поздний,822,adj,,false
+left,левый,823,adj,,false
+loose,свободный; неплотный,824,adj,,false
+loud,громкий,825,adj,,false
+low,низкий,826,adj,,false
+mixed,смешанный,827,adj,,false
+narrow,узкий,828,adj,,false
+old,старый,829,adj,,false
+opposite,противоположный,830,adj,,false
+public,общественный; публичный,831,adj,,false
+rough,грубый; шероховатый,832,adj,,false
+sad,грустный; печальный,833,adj,,false
+safe,безопасный; невредимый,834,adj,,false
+secret,секретный; тайный,835,adj,,false
+short,короткий,836,adj,,false
+shut,закрытый,837,adj,,false
+simple,простой,838,adj,,false
+slow,медленный,839,adj,,false
+small,маленький; небольшой,840,adj,,false
+soft,мягкий,841,adj,,false
+solid,твёрдый; цельный,842,adj,,false
+special,особый; специальный,843,adj,,false
+strange,странный; чужой,844,adj,,false
+thin,тонкий; худой,845,adj,,false
+white,белый,846,adj,,false
+wrong,неправильный; ошибочный,847,adj,,false

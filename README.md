@@ -58,13 +58,30 @@ make test                  # uv run pytest -v
 
 ### Через Docker
 
+**Вариант А — стянуть готовый образ из GHCR** (так деплоится прод, см. `automation.yml`):
+
+```bash
+cp .env.example .env
+# логин в GHCR нужен, если образ приватный:
+echo $GHCR_TOKEN | docker login ghcr.io -u <github-username> --password-stdin
+docker compose pull          # тянет ghcr.io/romanychev-l/recall_bot/bot:latest
+docker compose up -d
+```
+
+**Вариант Б — собрать образ локально из текущего кода:**
+
 ```bash
 cp .env.example .env
 docker compose up -d --build
-
-# засеять словарь внутри контейнера бота:
-make seed-docker
 ```
+
+Засеять словарь:
+
+```bash
+make seed-docker             # docker compose exec bot python -m data.seed data/dictionary.csv
+```
+
+> ⚠️ **Данные «запечены» в образ.** `Dockerfile` копирует `data/` внутрь образа, а `docker-compose.yml` не монтирует том. Поэтому `make seed-docker` сеет тот `dictionary.csv`, что лежал в образе на момент сборки, а **не** твой локальный файл. После изменения CSV нужно либо пересобрать образ (`docker compose up -d --build`), либо дождаться публикации нового образа из CI и `docker compose pull`, либо засеять с хоста напрямую: `make seed-full` (читает локальный файл и пишет в mongo на `127.0.0.1`). Сам бот в рантайме читает слова из mongo, а не из CSV, так что для применения новых данных достаточно правильно пересеять БД.
 
 ## Словарь
 

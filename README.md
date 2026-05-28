@@ -78,6 +78,13 @@ english,translation,frequency_rank,pos,example,is_phrasal
 
 - `data/fixtures/test_words.csv` — 50 слов для smoke-теста.
 - `data/phrasal_verbs.csv` — стартовый набор фразовых глаголов, легко расширить до 500.
+- `data/easy_english_expressions.csv` — 1165 разговорных выражений и идиом из подкаста *Daily Easy English* (Coach Shane), `frequency_rank` 30001+.
+
+Залить дополнительный набор в БД:
+
+```bash
+python -m data.seed data/easy_english_expressions.csv
+```
 
 Для сборки полного словаря на 20 000+ записей из открытых источников:
 

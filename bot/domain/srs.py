@@ -26,7 +26,7 @@ class CardUpdate:
 
 
 def _card_to_doc(card: Card) -> dict[str, Any]:
-    """Serialize a Card to a Mongo-friendly dict (datetimes stay as datetime)."""
+    """Serialize a Card to a storage-friendly dict (datetimes stay as datetime)."""
     return {
         "card_id": card.card_id,
         "state": int(card.state) if hasattr(card.state, "value") else int(card.state),
@@ -41,8 +41,9 @@ def _card_to_doc(card: Card) -> dict[str, Any]:
 def _ensure_utc(value: Optional[datetime]) -> Optional[datetime]:
     """Coerce a datetime to tz-aware UTC.
 
-    Mongo returns naive (UTC) datetimes on read-back; FSRS and the rest of the
-    app work with tz-aware datetimes, so mixing them raises
+    Storage backends tend to hand back naive (UTC) datetimes — SQLite has no
+    datetime type at all. FSRS and the rest of the app work with tz-aware
+    datetimes, and mixing the two raises
     ``TypeError: can't subtract offset-naive and offset-aware datetimes``.
     """
     if isinstance(value, datetime) and value.tzinfo is None:

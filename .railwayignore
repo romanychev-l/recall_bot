@@ -1,0 +1,16 @@
+# Keep `railway up` from uploading things the image does not need.
+# Mirrors .dockerignore — notably the ~450 MB Wiktextract dump.
+.git
+.venv
+tests
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+data/.cache
+kaikki.org-dictionary-English.jsonl.gz
+*.jsonl.gz
+*.db
+*.db-wal
+*.db-shm
+.env

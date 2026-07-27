@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
 from bot.domain.srs import SrsService
+from bot.repositories.batches_repo import BatchesRepo
 from bot.repositories.cards_repo import CardsRepo
 from bot.repositories.review_log_repo import ReviewLogRepo
 from bot.repositories.users_repo import UsersRepo
@@ -19,6 +22,7 @@ class Container:
     users_repo: UsersRepo
     words_repo: WordsRepo
     cards_repo: CardsRepo
+    batches_repo: BatchesRepo
     review_log_repo: ReviewLogRepo
     srs: SrsService
     onboarding: OnboardingService
@@ -29,17 +33,18 @@ class Container:
 
 
 def build_container(
-    db,
+    session_factory: async_sessionmaker,
     *,
     scheduler,
     send_reminder,
 ) -> Container:
-    users_repo = UsersRepo(db)
-    words_repo = WordsRepo(db)
-    cards_repo = CardsRepo(db)
-    review_log_repo = ReviewLogRepo(db)
+    users_repo = UsersRepo(session_factory)
+    words_repo = WordsRepo(session_factory)
+    cards_repo = CardsRepo(session_factory)
+    batches_repo = BatchesRepo(session_factory)
+    review_log_repo = ReviewLogRepo(session_factory)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     onboarding = OnboardingService(users_repo, batch)
     learning = LearningService(
         users_repo, words_repo, cards_repo, review_log_repo, srs, batch
@@ -50,6 +55,7 @@ def build_container(
         users_repo=users_repo,
         words_repo=words_repo,
         cards_repo=cards_repo,
+        batches_repo=batches_repo,
         review_log_repo=review_log_repo,
         srs=srs,
         onboarding=onboarding,

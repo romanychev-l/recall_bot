@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "aiogram>=3.26,<4",
-    "pymongo>=4.12",
+    "sqlalchemy[asyncio]>=2.0,<3",
+    "aiosqlite>=0.20",
+    "alembic>=1.13,<2",
     "pydantic-settings>=2.8,<3",
     "aiogram-dialog>=2.3,<3",
     "fluentogram>=1.1.6,<2",

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from bson import ObjectId
 
 from bot.constants import STATE_LEARNING, STATE_NEW, STATE_REVIEW
 from bot.domain.srs import SrsService
@@ -14,12 +13,12 @@ from tests.conftest import InMemoryWordsRepo, make_words
 
 @pytest.mark.asyncio
 async def test_evaluate_correct_answer_updates_state(
-    users_repo, cards_repo, review_log_repo
+    users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(5)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
         users_repo, words_repo, cards_repo, review_log_repo, srs, batch
     )
@@ -31,7 +30,8 @@ async def test_evaluate_correct_answer_updates_state(
     user = await users_repo.get(1)
 
     card = cards_repo.docs[0]
-    outcome = await learn.evaluate_answer(user, card, words[0]["english"])
+    word = await words_repo.by_id(card["word_id"])
+    outcome = await learn.evaluate_answer(user, card, word["english"])
     assert outcome.correct is True
     assert outcome.new_state in (STATE_LEARNING, STATE_REVIEW)
     assert len(review_log_repo.entries) == 1
@@ -40,12 +40,12 @@ async def test_evaluate_correct_answer_updates_state(
 
 @pytest.mark.asyncio
 async def test_evaluate_wrong_answer_logs_again(
-    users_repo, cards_repo, review_log_repo
+    users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(3)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
         users_repo, words_repo, cards_repo, review_log_repo, srs, batch
     )
@@ -64,12 +64,12 @@ async def test_evaluate_wrong_answer_logs_again(
 
 @pytest.mark.asyncio
 async def test_batch_advances_when_all_pass_first_interval(
-    users_repo, cards_repo, review_log_repo
+    users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(6)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
         users_repo, words_repo, cards_repo, review_log_repo, srs, batch
     )
@@ -88,7 +88,7 @@ async def test_batch_advances_when_all_pass_first_interval(
         fresh_card = await cards_repo.get(1, card["word_id"])
         last_outcome = await learn.evaluate_answer(
             fresh_user, fresh_card,
-            next(w["english"] for w in words if w["_id"] == fresh_card["word_id"]),
+            next(w["english"] for w in words if w["id"] == fresh_card["word_id"]),
             now=now,
         )
 
@@ -100,12 +100,12 @@ async def test_batch_advances_when_all_pass_first_interval(
 
 @pytest.mark.asyncio
 async def test_build_session_orders_hard_first(
-    users_repo, cards_repo, review_log_repo
+    users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(6)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
         users_repo, words_repo, cards_repo, review_log_repo, srs, batch
     )
@@ -120,7 +120,7 @@ async def test_build_session_orders_hard_first(
     for i, d in enumerate(cards_repo.docs):
         if i < 3:
             d["my_state"] = STATE_REVIEW
-            d["fsrs"]["due"] = now - timedelta(days=1)
+            d["due"] = now - timedelta(days=1)
             d["is_hard"] = (i == 2)  # one hard card
 
     session = await learn.build_session(user, now=now)
@@ -130,12 +130,12 @@ async def test_build_session_orders_hard_first(
 
 @pytest.mark.asyncio
 async def test_skip_today_sets_skip_until(
-    users_repo, cards_repo, review_log_repo
+    users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(2)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
         users_repo, words_repo, cards_repo, review_log_repo, srs, batch
     )

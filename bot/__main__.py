@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from functools import partial
+from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -8,8 +8,11 @@ from aiogram.enums import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fluentogram import TranslatorHub
 
-from bot.config_data.config import config_settings, db
+from bot.config_data.config import config_settings, engine, session_factory
 from bot.container import build_container
+from bot.db.bootstrap import run_migrations
+from bot.db.seed import seed_if_empty
+from bot.db.session import check_connection
 from bot.handlers.actions import router as actions_router
 from bot.handlers.fallback import router as fallback_router
 from bot.handlers.help import router as help_router
@@ -28,6 +31,11 @@ logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
+    # Schema first, then data: a fresh volume has neither.
+    await run_migrations(config_settings.database_url)
+    await check_connection(engine)
+    await seed_if_empty(session_factory, Path(config_settings.DICTIONARY_CSV))
+
     bot = Bot(
         token=config_settings.TOKEN.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
@@ -47,14 +55,9 @@ async def main() -> None:
         await daily_reminder(bot, c, user_id)
 
     container = build_container(
-        db, scheduler=scheduler, send_reminder=send_reminder
+        session_factory, scheduler=scheduler, send_reminder=send_reminder
     )
     container_ref["container"] = container
-
-    # Ensure indexes
-    await container.words_repo.ensure_indexes()
-    await container.cards_repo.ensure_indexes()
-    await container.review_log_repo.ensure_indexes()
 
     dp.include_router(start_router)
     dp.include_router(help_router)
@@ -76,6 +79,7 @@ async def main() -> None:
     finally:
         scheduler.shutdown(wait=False)
         await bot.session.close()
+        await engine.dispose()
         logger.info("Bot stopped")
 
 

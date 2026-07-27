@@ -37,14 +37,14 @@ class ReminderService:
             hh, mm = user["reminder_time"].split(":")
             tz = ZoneInfo(user["tz"])
         except Exception as exc:  # noqa: BLE001 — bad user data shouldn't crash
-            logger.warning("reminder_skip user_id=%s reason=%s", user["_id"], exc)
+            logger.warning("reminder_skip user_id=%s reason=%s", user["id"], exc)
             return
         trigger = CronTrigger(hour=int(hh), minute=int(mm), timezone=tz)
         self.scheduler.add_job(
             self.send_reminder,
             trigger=trigger,
-            args=[user["_id"]],
-            id=_job_id(user["_id"]),
+            args=[user["id"]],
+            id=_job_id(user["id"]),
             replace_existing=True,
         )
 

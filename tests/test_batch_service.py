@@ -11,11 +11,11 @@ from tests.conftest import InMemoryWordsRepo, make_words
 
 
 @pytest.mark.asyncio
-async def test_issue_first_batch(users_repo, cards_repo) -> None:
+async def test_issue_first_batch(users_repo, cards_repo, batches_repo) -> None:
     words = make_words(50)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
 
     await users_repo.create_if_absent(1, initial_rank=10)
     user = await users_repo.get(1)
@@ -34,11 +34,13 @@ async def test_issue_first_batch(users_repo, cards_repo) -> None:
 
 
 @pytest.mark.asyncio
-async def test_maybe_issue_next_batch_no_op_if_pending(users_repo, cards_repo) -> None:
+async def test_maybe_issue_next_batch_no_op_if_pending(
+    users_repo, cards_repo, batches_repo
+) -> None:
     words = make_words(20)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     await users_repo.create_if_absent(1)
     user = await users_repo.get(1)
     user["batch_size"] = 5
@@ -53,12 +55,12 @@ async def test_maybe_issue_next_batch_no_op_if_pending(users_repo, cards_repo) -
 
 @pytest.mark.asyncio
 async def test_maybe_issue_next_batch_progresses_when_all_review(
-    users_repo, cards_repo
+    users_repo, cards_repo, batches_repo
 ) -> None:
     words = make_words(20)
     words_repo = InMemoryWordsRepo(words)
     srs = SrsService()
-    batch = BatchService(users_repo, words_repo, cards_repo, srs)
+    batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     await users_repo.create_if_absent(1)
     await users_repo.update(1, batch_size=3)
     user = await users_repo.get(1)

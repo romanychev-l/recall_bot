@@ -15,7 +15,12 @@ RUN uv sync --frozen --no-dev
 FROM python:3.14-slim-bookworm AS run-image
 COPY --from=compile-image /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+# Default to a mounted volume: a container filesystem is wiped on every deploy.
+ENV DB_PATH=/data/recall_bot.db
 WORKDIR /app
 COPY bot ./bot
 COPY data ./data
+# Migrations run at startup, so the scripts ship with the image.
+COPY alembic ./alembic
+COPY alembic.ini ./
 CMD ["python", "-m", "bot"]

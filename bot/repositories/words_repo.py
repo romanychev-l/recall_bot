@@ -2,35 +2,40 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from bson import ObjectId
+from sqlalchemy import func, select
 
-from bot.constants import WORDS_COLLECTION
+from bot.db.models import Word
+from bot.repositories.base import BaseRepo, one, rows
 
 
-class WordsRepo:
-    def __init__(self, db: Any) -> None:
-        self._coll = db[WORDS_COLLECTION]
+class WordsRepo(BaseRepo):
+    async def by_id(self, word_id: int) -> Optional[dict[str, Any]]:
+        async with self._sf() as s:
+            res = await s.execute(select(Word.__table__).where(Word.id == word_id))
+            return one(res)
 
-    async def by_id(self, word_id: ObjectId) -> Optional[dict[str, Any]]:
-        return await self._coll.find_one({"_id": word_id})
-
-    async def by_ids(self, word_ids: list[ObjectId]) -> list[dict[str, Any]]:
+    async def by_ids(self, word_ids: list[int]) -> list[dict[str, Any]]:
         if not word_ids:
             return []
-        cursor = self._coll.find({"_id": {"$in": word_ids}})
-        return [doc async for doc in cursor]
+        async with self._sf() as s:
+            res = await s.execute(
+                select(Word.__table__).where(Word.id.in_(word_ids))
+            )
+            return rows(res)
 
-    async def next_n_with_rank_gte(self, min_rank: int, n: int) -> list[dict[str, Any]]:
-        cursor = (
-            self._coll.find({"frequency_rank": {"$gte": min_rank}})
-            .sort("frequency_rank", 1)
-            .limit(n)
-        )
-        return [doc async for doc in cursor]
+    async def next_n_with_rank_gte(
+        self, min_rank: int, n: int
+    ) -> list[dict[str, Any]]:
+        async with self._sf() as s:
+            res = await s.execute(
+                select(Word.__table__)
+                .where(Word.frequency_rank >= min_rank)
+                .order_by(Word.frequency_rank.asc())
+                .limit(n)
+            )
+            return rows(res)
 
     async def count(self) -> int:
-        return await self._coll.count_documents({})
-
-    async def ensure_indexes(self) -> None:
-        await self._coll.create_index("frequency_rank", unique=True)
-        await self._coll.create_index("english")
+        async with self._sf() as s:
+            res = await s.execute(select(func.count()).select_from(Word.__table__))
+            return int(res.scalar_one())

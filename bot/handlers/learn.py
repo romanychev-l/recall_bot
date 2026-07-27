@@ -8,7 +8,6 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from bson import ObjectId
 from fluentogram import TranslatorRunner
 
 from bot.container import Container
@@ -19,8 +18,18 @@ logger = logging.getLogger(__name__)
 router = Router(name="learn")
 
 
-def _hex_ids(cards: list[dict]) -> list[str]:
+def _queue_ids(cards: list[dict]) -> list[str]:
+    """Word ids as strings — FSM storage round-trips them as JSON."""
     return [str(c["word_id"]) for c in cards]
+
+
+def _parse_id(raw: str) -> Optional[int]:
+    """Word id from FSM/callback data, or None if it is not a valid id."""
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        logger.warning("bad_word_id raw=%r", raw)
+        return None
 
 
 async def _show_next(
@@ -37,8 +46,13 @@ async def _show_next(
         await bot.send_message(chat_id, i18n.message.session_done())
         await state.clear()
         return False
-    word_id_hex = queue[0]
-    card = await container.cards_repo.get(user_id, ObjectId(word_id_hex))
+    word_id_str = queue[0]
+    word_id = _parse_id(word_id_str)
+    card = (
+        await container.cards_repo.get(user_id, word_id)
+        if word_id is not None
+        else None
+    )
     if card is None:
         queue.pop(0)
         await state.update_data(queue=queue)
@@ -53,7 +67,7 @@ async def _show_next(
         remaining=len(queue),
         pos=word.get("pos") or "—",
     )
-    await bot.send_message(chat_id, text, reply_markup=answer_actions_kb(i18n, word_id_hex))
+    await bot.send_message(chat_id, text, reply_markup=answer_actions_kb(i18n, word_id_str))
     return True
 
 
@@ -75,7 +89,7 @@ async def cmd_learn(
     await state.set_state(LearnSG.waiting_answer)
     await state.update_data(
         user_id=message.from_user.id,
-        queue=_hex_ids(session),
+        queue=_queue_ids(session),
     )
     await _show_next(message.chat.id, message.bot, state, container, i18n)
 
@@ -117,7 +131,7 @@ async def cmd_cram(
     await state.set_state(LearnSG.waiting_answer)
     await state.update_data(
         user_id=message.from_user.id,
-        queue=_hex_ids(session),
+        queue=_queue_ids(session),
     )
     await message.answer(i18n.message.cram_started(n=len(session)))
     await _show_next(message.chat.id, message.bot, state, container, i18n)
@@ -135,14 +149,18 @@ async def on_answer(
     if not queue:
         await state.clear()
         return
-    word_id_hex = queue[0]
-    word_id = ObjectId(word_id_hex)
+    word_id_str = queue[0]
+    word_id = _parse_id(word_id_str)
     user = await container.users_repo.get(message.from_user.id)
     if user is None:
         await message.answer(i18n.message.not_onboarded())
         await state.clear()
         return
-    card = await container.cards_repo.get(message.from_user.id, word_id)
+    card = (
+        await container.cards_repo.get(message.from_user.id, word_id)
+        if word_id is not None
+        else None
+    )
     if card is None:
         queue.pop(0)
         await state.update_data(queue=queue)
@@ -174,21 +192,22 @@ async def on_skip(
     container: Container,
     i18n: TranslatorRunner,
 ) -> None:
-    word_id_hex = callback.data.split(":", 2)[2]
+    word_id_str = callback.data.split(":", 2)[2]
+    word_id = _parse_id(word_id_str)
     user = await container.users_repo.get(callback.from_user.id)
-    if user is None:
+    if user is None or word_id is None:
         await callback.answer()
         return
     await container.learning.skip_today(
         callback.from_user.id,
-        ObjectId(word_id_hex),
+        word_id,
         user["tz"],
         datetime.now(timezone.utc),
     )
     await callback.answer(i18n.message.skipped_today())
     data = await state.get_data()
     queue: list[str] = data.get("queue", [])
-    if queue and queue[0] == word_id_hex:
+    if queue and queue[0] == word_id_str:
         queue.pop(0)
         await state.update_data(queue=queue)
     await _show_next(callback.message.chat.id, callback.message.bot, state, container, i18n)
@@ -202,10 +221,10 @@ async def on_dont_know(
     i18n: TranslatorRunner,
 ) -> None:
     """User gives up — reveal the word, count as wrong, mark hard, advance."""
-    word_id_hex = callback.data.split(":", 2)[2]
-    word_id = ObjectId(word_id_hex)
+    word_id_str = callback.data.split(":", 2)[2]
+    word_id = _parse_id(word_id_str)
     user = await container.users_repo.get(callback.from_user.id)
-    if user is None:
+    if user is None or word_id is None:
         await callback.answer()
         return
     card = await container.cards_repo.get(callback.from_user.id, word_id)
@@ -221,7 +240,7 @@ async def on_dont_know(
 
     data = await state.get_data()
     queue: list[str] = data.get("queue", [])
-    if queue and queue[0] == word_id_hex:
+    if queue and queue[0] == word_id_str:
         queue.pop(0)
         await state.update_data(queue=queue)
     await callback.answer()

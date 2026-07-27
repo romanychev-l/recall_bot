@@ -100,14 +100,14 @@ def test_graduation_requires_5_consecutive_at_30d(srs: SrsService) -> None:
 
 
 def test_review_with_naive_stored_datetimes(srs: SrsService) -> None:
-    """Regression: Mongo returns naive datetimes; reviewing with an aware `now`
-    must not raise 'can't subtract offset-naive and offset-aware datetimes'."""
+    """Regression: storage can hand back naive datetimes; reviewing with an aware
+    `now` must not raise 'can't subtract offset-naive and offset-aware datetimes'."""
     now = _now()
     card = srs.new_card_dict(now)
     # First review populates last_review (tz-aware in memory)
     upd = srs.review(card, STATE_NEW, 0, None, correct=True, now=now)
     fsrs = upd.fsrs
-    # Simulate a Mongo round-trip: BSON dates come back naive (UTC, no tzinfo)
+    # Simulate a storage round-trip that strips tzinfo (UTC, no tzinfo)
     fsrs = {
         k: (v.replace(tzinfo=None) if isinstance(v, datetime) else v)
         for k, v in fsrs.items()

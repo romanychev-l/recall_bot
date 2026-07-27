@@ -10,14 +10,14 @@ def onboarding_kb(i18n) -> InlineKeyboardMarkup:
     ])
 
 
-def answer_actions_kb(i18n, word_id_hex: str) -> InlineKeyboardMarkup:
+def answer_actions_kb(i18n, word_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text=i18n.button.dont_know(), callback_data=f"card:dontknow:{word_id_hex}"
+                text=i18n.button.dont_know(), callback_data=f"card:dontknow:{word_id}"
             ),
             InlineKeyboardButton(
-                text=i18n.button.skip(), callback_data=f"card:skip:{word_id_hex}"
+                text=i18n.button.skip(), callback_data=f"card:skip:{word_id}"
             ),
         ],
     ])

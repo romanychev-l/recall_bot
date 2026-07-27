@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import os
 import sys
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 import pytest
-from bson import ObjectId
 
 # Ensure project root is on path
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -17,7 +17,14 @@ if ROOT not in sys.path:
 # Provide a TOKEN so Settings() doesn't fail on import
 os.environ.setdefault("TOKEN", "test-token")
 
-from bot.constants import STATE_LEARNING, STATE_NEW, STATE_REVIEW
+from bot.constants import (  # noqa: E402
+    STATE_GRADUATED,
+    STATE_LEARNING,
+    STATE_NEW,
+    STATE_REVIEW,
+)
+from bot.db.models import Base  # noqa: E402
+from bot.db.session import build_engine, build_session_factory  # noqa: E402
 
 
 @pytest.fixture
@@ -44,7 +51,7 @@ class InMemoryUsersRepo:
             DEFAULT_TZ,
         )
         self.docs[telegram_id] = {
-            "_id": telegram_id,
+            "id": telegram_id,
             "batch_size": DEFAULT_BATCH_SIZE,
             "daily_goal": DEFAULT_DAILY_GOAL,
             "reminder_time": DEFAULT_REMINDER_TIME,
@@ -78,13 +85,13 @@ class InMemoryWordsRepo:
 
     async def by_id(self, word_id):
         for w in self.words:
-            if w["_id"] == word_id:
+            if w["id"] == word_id:
                 return w
         return None
 
     async def by_ids(self, word_ids):
         ids = set(word_ids)
-        return [w for w in self.words if w["_id"] in ids]
+        return [w for w in self.words if w["id"] in ids]
 
     async def next_n_with_rank_gte(self, min_rank, n):
         candidates = sorted(
@@ -96,16 +103,22 @@ class InMemoryWordsRepo:
     async def count(self):
         return len(self.words)
 
-    async def ensure_indexes(self):
-        return None
+
+class InMemoryBatchesRepo:
+    def __init__(self) -> None:
+        self._ids = itertools.count(1)
+        self.docs: list[dict[str, Any]] = []
+
+    async def create(self, user_id: int, now: datetime) -> int:
+        batch_id = next(self._ids)
+        self.docs.append({"id": batch_id, "user_id": user_id, "created_at": now})
+        return batch_id
 
 
 class InMemoryCardsRepo:
     def __init__(self) -> None:
+        self._ids = itertools.count(1)
         self.docs: list[dict[str, Any]] = []
-
-    async def ensure_indexes(self):
-        return None
 
     def _find(self, user_id, word_id):
         for d in self.docs:
@@ -116,16 +129,24 @@ class InMemoryCardsRepo:
     async def get(self, user_id, word_id):
         return self._find(user_id, word_id)
 
+    async def by_word_ids(self, user_id, word_ids):
+        ids = set(word_ids)
+        return [
+            d for d in self.docs if d["user_id"] == user_id and d["word_id"] in ids
+        ]
+
     async def bulk_create_new(self, user_id, words, batch_id, fsrs_factory, now):
         created = []
         for w in words:
+            fsrs = fsrs_factory(now)
             doc = {
-                "_id": ObjectId(),
+                "id": next(self._ids),
                 "user_id": user_id,
-                "word_id": w["_id"],
+                "word_id": w["id"],
                 "batch_id": batch_id,
                 "frequency_rank": w["frequency_rank"],
-                "fsrs": fsrs_factory(now),
+                "fsrs": fsrs,
+                "due": fsrs["due"],
                 "my_state": STATE_NEW,
                 "consecutive_successes_at_review": 0,
                 "first_reached_review_at": None,
@@ -147,6 +168,7 @@ class InMemoryCardsRepo:
             return
         d.update({
             "fsrs": fsrs,
+            "due": fsrs["due"],
             "my_state": my_state,
             "consecutive_successes_at_review": consecutive_successes_at_review,
             "first_reached_review_at": first_reached_review_at,
@@ -176,7 +198,7 @@ class InMemoryCardsRepo:
             d for d in self.docs
             if d["user_id"] == user_id
             and d["my_state"] in (STATE_LEARNING, STATE_REVIEW)
-            and d["fsrs"]["due"] <= now
+            and d["due"] <= now
             and (d["skip_until"] is None or d["skip_until"] <= now)
         ]
         candidates.sort(key=lambda d: (not d["is_hard"], d["frequency_rank"]))
@@ -195,25 +217,37 @@ class InMemoryCardsRepo:
     async def count_graduated(self, user_id):
         return sum(
             1 for d in self.docs
-            if d["user_id"] == user_id and d["my_state"] == "graduated"
+            if d["user_id"] == user_id and d["my_state"] == STATE_GRADUATED
         )
+
+    async def count_by_state(self, user_id):
+        out = {STATE_NEW: 0, STATE_LEARNING: 0, STATE_REVIEW: 0, STATE_GRADUATED: 0}
+        for d in self.docs:
+            if d["user_id"] == user_id:
+                out[d["my_state"]] = out.get(d["my_state"], 0) + 1
+        return out
 
     async def graduated_ranks(self, user_id):
         return [
             d["frequency_rank"] for d in self.docs
-            if d["user_id"] == user_id and d["my_state"] == "graduated"
+            if d["user_id"] == user_id and d["my_state"] == STATE_GRADUATED
+        ]
+
+    async def learned_ranks(self, user_id):
+        return [
+            d["frequency_rank"] for d in self.docs
+            if d["user_id"] == user_id
+            and d["my_state"] in (STATE_REVIEW, STATE_GRADUATED)
         ]
 
 
 class InMemoryReviewLogRepo:
     def __init__(self) -> None:
+        self._ids = itertools.count(1)
         self.entries: list[dict[str, Any]] = []
 
-    async def ensure_indexes(self):
-        return None
-
     async def append(self, **fields):
-        self.entries.append({**fields, "_id": ObjectId()})
+        self.entries.append({**fields, "id": next(self._ids)})
 
     async def stats_for_window(self, user_id, since):
         good, total = 0, 0
@@ -243,16 +277,25 @@ def cards_repo():
 
 
 @pytest.fixture
+def batches_repo():
+    return InMemoryBatchesRepo()
+
+
+@pytest.fixture
 def review_log_repo():
     return InMemoryReviewLogRepo()
 
 
+_word_ids = itertools.count(1000)
+
+
 def make_words(n: int, start_rank: int = 1) -> list[dict[str, Any]]:
+    """Word rows with ids deliberately distinct from ranks."""
     words = []
     for i in range(n):
         rank = start_rank + i
         words.append({
-            "_id": ObjectId(),
+            "id": next(_word_ids),
             "english": f"word{rank}",
             "translation": f"слово{rank}",
             "frequency_rank": rank,
@@ -266,3 +309,13 @@ def make_words(n: int, start_rank: int = 1) -> list[dict[str, Any]]:
 @pytest.fixture
 def words_factory():
     return make_words
+
+
+@pytest.fixture
+async def session_factory(tmp_path):
+    """Real SQLite-backed session factory for repository integration tests."""
+    engine = build_engine(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield build_session_factory(engine)
+    await engine.dispose()

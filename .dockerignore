@@ -10,6 +10,10 @@ Makefile
 .gitignore
 .venv
 tests
+.pytest_cache
 data/.cache
 kaikki.org-dictionary-English.jsonl.gz
 *.jsonl.gz
+*.db
+*.db-wal
+*.db-shm

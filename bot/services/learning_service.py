@@ -6,8 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
 
-from bson import ObjectId
-
 from bot.constants import RESULT_AGAIN, RESULT_GOOD, STATE_LEARNING, STATE_REVIEW
 from bot.domain.matching import is_correct
 from bot.domain.srs import SrsService
@@ -54,12 +52,12 @@ class LearningService:
     ) -> list[dict]:
         now = now or datetime.now(timezone.utc)
         cap = cap or user.get("daily_goal", user["batch_size"])
-        due = await self.cards_repo.find_due(user["_id"], now, cap)
+        due = await self.cards_repo.find_due(user["id"], now, cap)
         remaining = max(0, cap - len(due))
         new_cards: list[dict] = []
         if user.get("current_batch_id") is not None and remaining > 0:
             new_cards = await self.cards_repo.find_new_in_batch(
-                user["_id"], user["current_batch_id"], remaining
+                user["id"], user["current_batch_id"], remaining
             )
         session = list(due) + list(new_cards)
         random.shuffle(session)
@@ -88,7 +86,7 @@ class LearningService:
             now=now,
         )
         await self.cards_repo.update_after_review(
-            user["_id"],
+            user["id"],
             card["word_id"],
             fsrs=update.fsrs,
             my_state=update.my_state,
@@ -97,7 +95,7 @@ class LearningService:
             now=now,
         )
         await self.review_log_repo.append(
-            user_id=user["_id"],
+            user_id=user["id"],
             word_id=card["word_id"],
             batch_id=card["batch_id"],
             result=RESULT_GOOD if correct else RESULT_AGAIN,
@@ -108,12 +106,12 @@ class LearningService:
         next_batch_issued = False
         if transitioned and card["batch_id"] == user.get("current_batch_id"):
             issued = await self.batch_service.maybe_issue_next_batch(
-                user["_id"], card["batch_id"]
+                user["id"], card["batch_id"]
             )
             next_batch_issued = issued is not None
         logger.info(
             "answer user_id=%s word_id=%s correct=%s new_state=%s",
-            user["_id"], card["word_id"], correct, update.my_state,
+            user["id"], card["word_id"], correct, update.my_state,
         )
         return AnswerOutcome(
             correct=correct,
@@ -124,7 +122,7 @@ class LearningService:
         )
 
     async def skip_today(
-        self, user_id: int, word_id: ObjectId, user_tz: str, now: datetime
+        self, user_id: int, word_id: int, user_tz: str, now: datetime
     ) -> None:
         from zoneinfo import ZoneInfo
 
@@ -134,5 +132,5 @@ class LearningService:
             user_id, word_id, end_of_day_local.astimezone(timezone.utc)
         )
 
-    async def mark_hard(self, user_id: int, word_id: ObjectId, value: bool = True) -> None:
+    async def mark_hard(self, user_id: int, word_id: int, value: bool = True) -> None:
         await self.cards_repo.set_hard(user_id, word_id, value)

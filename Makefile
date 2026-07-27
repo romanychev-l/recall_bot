@@ -23,6 +23,16 @@ seed-full:
 build-dict:
 	uv run python -m data.build_dictionary --top 20000 --out data/dictionary.csv
 
+# --- database ---
+
+# The bot runs migrations itself on startup; these are for local schema work.
+migrate:
+	uv run alembic upgrade head
+
+# Usage: make revision m="add streak column"
+revision:
+	uv run alembic revision --autogenerate -m "$(m)"
+
 # --- docker ---
 
 build:
@@ -50,16 +60,5 @@ logs:
 seed-docker:
 	docker compose exec bot python -m data.seed data/dictionary.csv
 
-# --- ci/cd config ---
-
-# Заливает все нужные секреты и variables в текущий репозиторий одной командой.
-# Требует .env.ci (скопируй из .env.ci.example) и gh CLI с логином.
-push-ci-config:
-	@test -f .env.ci || (echo "Создай .env.ci из .env.ci.example" && exit 1)
-	@awk '/^# === SECRETS ===/{f=1;next} /^# === VARIABLES ===/{f=0} f && /=/' .env.ci > .env.ci.secrets
-	@awk '/^# === VARIABLES ===/{f=1;next} /^# === /{f=0} f && /=/' .env.ci > .env.ci.vars
-	gh secret set   -f .env.ci.secrets
-	gh variable set -f .env.ci.vars
-	@rm -f .env.ci.secrets .env.ci.vars
-
-.PHONY: sync run-local test seed seed-full build-dict build run clean build-run up down logs seed-docker push-ci-config
+.PHONY: sync run-local test seed seed-full build-dict migrate revision \
+	build run clean build-run up down logs seed-docker

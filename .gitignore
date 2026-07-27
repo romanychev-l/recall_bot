@@ -146,6 +146,13 @@ kaikki.org-dictionary-English.jsonl.gz
 .env.ci.secrets
 .env.ci.vars
 
+# Local SQLite database (WAL mode creates the -wal/-shm siblings)
+*.db
+*.db-wal
+*.db-shm
+
+.DS_Store
+
 # mypy
 .mypy_cache/
 .dmypy.json

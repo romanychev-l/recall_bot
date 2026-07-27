@@ -2,17 +2,22 @@ from typing import Optional
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pymongo import AsyncMongoClient
+
+from bot.db.session import build_engine, build_session_factory
 
 
 class Settings(BaseSettings):
     TOKEN: SecretStr
 
-    # Either set MONGO_URI directly (recommended), or use host/port pieces.
-    MONGO_URI: Optional[str] = None
-    MONGO_HOST: str = "localhost"
-    MONGO_PORT: int = 27017
-    MONGO_DB_NAME: str = "recall_bot"
+    # Path to the SQLite file. On Railway point this at the mounted volume,
+    # e.g. /data/recall_bot.db, so the database survives redeploys.
+    DB_PATH: str = "recall_bot.db"
+    # Escape hatch: set a full SQLAlchemy URL to use another backend (e.g.
+    # postgresql+asyncpg://...) without touching code.
+    DATABASE_URL: Optional[str] = None
+
+    # Seeded into an empty database on first start.
+    DICTIONARY_CSV: str = "data/dictionary.csv"
 
     LOG_LEVEL: str = "INFO"
     SCHEDULER_TZ: str = "UTC"
@@ -20,15 +25,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property
-    def mongo_uri(self) -> str:
-        if self.MONGO_URI:
-            return self.MONGO_URI
-        return f"mongodb://{self.MONGO_HOST}:{self.MONGO_PORT}"
+    def database_url(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return f"sqlite+aiosqlite:///{self.DB_PATH}"
 
 
 config_settings = Settings()
 
-# tz_aware=True so datetimes read back from Mongo are tz-aware UTC, matching the
-# tz-aware datetimes used throughout the app (avoids naive/aware mix errors).
-mongo_client = AsyncMongoClient(config_settings.mongo_uri, tz_aware=True)
-db = mongo_client[config_settings.MONGO_DB_NAME]
+engine = build_engine(config_settings.database_url)
+session_factory = build_session_factory(engine)

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
 
-from bson import ObjectId
 from pydantic import BaseModel, ConfigDict, Field
 
 from bot.constants import (
@@ -16,18 +15,18 @@ from bot.constants import (
 
 
 class _Model(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class User(_Model):
-    telegram_id: int = Field(alias="_id")
+    telegram_id: int = Field(alias="id")
     batch_size: int = DEFAULT_BATCH_SIZE
     daily_goal: int = DEFAULT_DAILY_GOAL
     reminder_time: str = DEFAULT_REMINDER_TIME
     tz: str = DEFAULT_TZ
     language: str = "ru"
     initial_rank: int = 0
-    current_batch_id: Optional[ObjectId] = None
+    current_batch_id: Optional[int] = None
     next_batch_start_rank: int = 0
     streak_days: int = 0
     last_session_date: Optional[datetime] = None
@@ -35,7 +34,7 @@ class User(_Model):
 
 
 class Word(_Model):
-    id: ObjectId = Field(alias="_id")
+    id: int
     english: str
     translation: str
     frequency_rank: int
@@ -45,12 +44,13 @@ class Word(_Model):
 
 
 class UserCard(_Model):
-    id: ObjectId = Field(alias="_id", default_factory=ObjectId)
+    id: Optional[int] = None
     user_id: int
-    word_id: ObjectId
-    batch_id: ObjectId
+    word_id: int
+    batch_id: int
     frequency_rank: int
     fsrs: dict[str, Any]
+    due: datetime
     my_state: str = STATE_NEW
     consecutive_successes_at_review: int = 0
     first_reached_review_at: Optional[datetime] = None
@@ -61,10 +61,10 @@ class UserCard(_Model):
 
 
 class ReviewLogEntry(_Model):
-    id: ObjectId = Field(alias="_id", default_factory=ObjectId)
+    id: Optional[int] = None
     user_id: int
-    word_id: ObjectId
-    batch_id: ObjectId
+    word_id: int
+    batch_id: int
     result: str
     user_input: str
     reviewed_at: datetime

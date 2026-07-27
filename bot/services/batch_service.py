@@ -4,9 +4,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from bson import ObjectId
-
 from bot.domain.srs import SrsService
+from bot.repositories.batches_repo import BatchesRepo
 from bot.repositories.cards_repo import CardsRepo
 from bot.repositories.users_repo import UsersRepo
 from bot.repositories.words_repo import WordsRepo
@@ -20,11 +19,13 @@ class BatchService:
         users_repo: UsersRepo,
         words_repo: WordsRepo,
         cards_repo: CardsRepo,
+        batches_repo: BatchesRepo,
         srs: SrsService,
     ) -> None:
         self.users_repo = users_repo
         self.words_repo = words_repo
         self.cards_repo = cards_repo
+        self.batches_repo = batches_repo
         self.srs = srs
 
     async def issue_next_batch(
@@ -32,29 +33,29 @@ class BatchService:
         user: dict,
         now: Optional[datetime] = None,
         size_override: Optional[int] = None,
-    ) -> Optional[ObjectId]:
+    ) -> Optional[int]:
         now = now or datetime.now(timezone.utc)
         start_rank = user.get("next_batch_start_rank", user.get("initial_rank", 0))
         size = size_override or user["batch_size"]
         words = await self.words_repo.next_n_with_rank_gte(start_rank, size)
         if not words:
-            logger.info("no_more_words user_id=%s start_rank=%s", user["_id"], start_rank)
+            logger.info("no_more_words user_id=%s start_rank=%s", user["id"], start_rank)
             return None
-        batch_id = ObjectId()
+        batch_id = await self.batches_repo.create(user["id"], now)
         await self.cards_repo.bulk_create_new(
-            user["_id"], words, batch_id, self.srs.new_card_dict, now
+            user["id"], words, batch_id, self.srs.new_card_dict, now
         )
         next_start = max(w["frequency_rank"] for w in words) + 1
-        await self.users_repo.set_current_batch(user["_id"], batch_id, next_start)
+        await self.users_repo.set_current_batch(user["id"], batch_id, next_start)
         logger.info(
             "batch_issued user_id=%s batch_id=%s size=%s next_start=%s",
-            user["_id"], batch_id, len(words), next_start,
+            user["id"], batch_id, len(words), next_start,
         )
         return batch_id
 
     async def maybe_issue_next_batch(
-        self, user_id: int, batch_id: ObjectId
-    ) -> Optional[ObjectId]:
+        self, user_id: int, batch_id: int
+    ) -> Optional[int]:
         pending = await self.cards_repo.count_pending_in_batch(user_id, batch_id)
         if pending > 0:
             return None

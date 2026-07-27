@@ -3,19 +3,19 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from bson import ObjectId
 
 from bot.services.stats_service import StatsService
+
+WORD_ID = 101
+BATCH_ID = 7
 
 
 @pytest.mark.asyncio
 async def test_accuracy_7d(users_repo, cards_repo, review_log_repo) -> None:
     now = datetime(2026, 6, 1, 12, tzinfo=timezone.utc)
-    wid = ObjectId()
-    bid = ObjectId()
     for r in ("good", "good", "again", "good"):
         await review_log_repo.append(
-            user_id=1, word_id=wid, batch_id=bid,
+            user_id=1, word_id=WORD_ID, batch_id=BATCH_ID,
             result=r, user_input="x", reviewed_at=now - timedelta(days=1),
         )
     stats = StatsService(users_repo, cards_repo, review_log_repo)
@@ -34,10 +34,9 @@ async def test_streak_today_and_yesterday(
     users_repo, cards_repo, review_log_repo
 ) -> None:
     now = datetime(2026, 6, 10, 20, tzinfo=timezone.utc)
-    wid, bid = ObjectId(), ObjectId()
     for d in (0, 1, 2, 3):
         await review_log_repo.append(
-            user_id=1, word_id=wid, batch_id=bid,
+            user_id=1, word_id=WORD_ID, batch_id=BATCH_ID,
             result="good", user_input="x",
             reviewed_at=now - timedelta(days=d, hours=1),
         )
@@ -48,11 +47,10 @@ async def test_streak_today_and_yesterday(
 @pytest.mark.asyncio
 async def test_today_counts(users_repo, cards_repo, review_log_repo) -> None:
     now = datetime(2026, 6, 1, 14, tzinfo=timezone.utc)
-    wid, bid = ObjectId(), ObjectId()
     # 3 today, 1 yesterday
     for r, days, hours in [("good", 0, 1), ("good", 0, 2), ("again", 0, 3), ("good", 1, 1)]:
         await review_log_repo.append(
-            user_id=1, word_id=wid, batch_id=bid,
+            user_id=1, word_id=WORD_ID, batch_id=BATCH_ID,
             result=r, user_input="x",
             reviewed_at=now - timedelta(days=days, hours=hours),
         )
@@ -65,10 +63,9 @@ async def test_today_counts(users_repo, cards_repo, review_log_repo) -> None:
 @pytest.mark.asyncio
 async def test_streak_broken(users_repo, cards_repo, review_log_repo) -> None:
     now = datetime(2026, 6, 10, 20, tzinfo=timezone.utc)
-    wid, bid = ObjectId(), ObjectId()
     # only one entry 5 days ago — streak should be 0 (too old)
     await review_log_repo.append(
-        user_id=1, word_id=wid, batch_id=bid,
+        user_id=1, word_id=WORD_ID, batch_id=BATCH_ID,
         result="good", user_input="x",
         reviewed_at=now - timedelta(days=5),
     )

@@ -3,8 +3,10 @@ services:
     image: ghcr.io/romanychev-l/recall_bot/bot:latest
     build: .
     restart: unless-stopped
-    network_mode: host
     env_file: .env
-    environment:
-      MONGO_HOST: 127.0.0.1
-      MONGO_PORT: "27017"
+    volumes:
+      # DB_PATH defaults to /data/recall_bot.db (set in the Dockerfile).
+      - bot_data:/data
+
+volumes:
+  bot_data:

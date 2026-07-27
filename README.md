@@ -28,10 +28,12 @@ Telegram-бот для изучения английских слов метод
 
 ## Стек
 
-- Python 3.14, aiogram 3, pymongo (async), pydantic-settings
+- Python 3.14, aiogram 3, pydantic-settings
+- SQLAlchemy 2 (async) + SQLite через `aiosqlite`
+- Alembic — версионированные миграции схемы
 - FSRS (`fsrs` v6+) — алгоритм SRS
 - APScheduler — ежедневные напоминания
-- Docker Compose — локальный запуск (бот + MongoDB)
+- Docker Compose — локальный запуск
 
 ## Быстрый старт
 
@@ -51,6 +53,10 @@ uv run python -m bot
 make run-local
 ```
 
+При старте бот сам применяет миграции и, если таблица `words` пуста, засеивает
+словарь из `data/dictionary.csv`. Отдельно ничего готовить не нужно — база
+создастся файлом по пути из `DB_PATH` (по умолчанию `recall_bot.db` в корне).
+
 Тесты:
 ```bash
 make test                  # uv run pytest -v
@@ -58,11 +64,11 @@ make test                  # uv run pytest -v
 
 ### Через Docker
 
-**Вариант А — стянуть готовый образ из GHCR** (так деплоится прод, см. `automation.yml`):
+**Вариант А — стянуть готовый образ из GHCR:**
 
 ```bash
-cp .env.example .env
-# логин в GHCR нужен, если образ приватный:
+cp .env.example .env         # вписать TOKEN
+# логин нужен, только если пакет приватный:
 echo $GHCR_TOKEN | docker login ghcr.io -u <github-username> --password-stdin
 docker compose pull          # тянет ghcr.io/romanychev-l/recall_bot/bot:latest
 docker compose up -d
@@ -75,13 +81,15 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Засеять словарь:
+База лежит на томе `bot_data` (внутри контейнера — `/data/recall_bot.db`) и
+переживает пересоздание контейнера и обновление образа.
 
-```bash
-make seed-docker             # docker compose exec bot python -m data.seed data/dictionary.csv
-```
-
-> ⚠️ **Данные «запечены» в образ.** `Dockerfile` копирует `data/` внутрь образа, а `docker-compose.yml` не монтирует том. Поэтому `make seed-docker` сеет тот `dictionary.csv`, что лежал в образе на момент сборки, а **не** твой локальный файл. После изменения CSV нужно либо пересобрать образ (`docker compose up -d --build`), либо дождаться публикации нового образа из CI и `docker compose pull`, либо засеять с хоста напрямую: `make seed-full` (читает локальный файл и пишет в mongo на `127.0.0.1`). Сам бот в рантайме читает слова из mongo, а не из CSV, так что для применения новых данных достаточно правильно пересеять БД.
+> ⚠️ **CSV запечён в образ.** `Dockerfile` копирует `data/` внутрь образа, поэтому
+> автосид и `make seed-docker` используют тот `dictionary.csv`, что лежал в образе
+> на момент сборки, а **не** твой локальный файл. После правки CSV пересобери образ
+> (`docker compose up -d --build`) либо дождись нового образа из CI и `docker compose pull`.
+> Автосид срабатывает только на пустой таблице `words`; чтобы применить новые данные
+> к уже засеянной базе — `make seed-docker` (апсёрт по `frequency_rank`).
 
 ## Словарь
 
@@ -106,17 +114,19 @@ python -m data.seed data/easy_english_expressions.csv
 
 ### Пересев после переранжирования
 
-Сидер апсёртит записи по `frequency_rank`. Поскольку Basic English занял ранги `1..847`, а остальные слова сдвинулись на `848+`, на **уже засеянной** БД простой пересев создаст дубли и устаревшие записи. Перед пересевом нужно очистить коллекцию `words`:
+Сидер апсёртит по `frequency_rank`, поэтому повторный прогон дублей не создаёт:
+существующие ранги обновляются на месте, новые добавляются. Но если в новом CSV
+каких-то рангов больше нет, старые записи останутся висеть. Тогда таблицу
+приходится чистить:
 
 ```bash
-# очистить коллекцию слов (БД recall_bot, коллекция words)
-mongosh recall_bot --eval 'db.words.drop()'
-
-# затем пересеять заново
-make seed-full        # локально (uv)
-# или в docker:
-make seed-docker
+sqlite3 recall_bot.db 'DELETE FROM words;'
+make seed-full
 ```
+
+> ⚠️ У `user_cards.word_id` стоит `ON DELETE CASCADE`, так что очистка `words`
+> **сотрёт и весь прогресс пользователей**. На боевой базе так делать нельзя —
+> там достаточно обычного `make seed-full`, который обновит записи на месте.
 
 Для сборки полного словаря на 20 000+ записей из открытых источников:
 
@@ -149,23 +159,71 @@ rep 4–5 (Good) → продолжает расти
 - `review` — FSRS Review.
 - `graduated` — review + 5 успехов подряд + интервал ≥30 дней. Терминальная метка, дальше FSRS продолжает планировать.
 
+## База данных
+
+SQLite-файл по пути `DB_PATH`. Схема — пять таблиц: `users`, `words`, `batches`,
+`user_cards`, `review_log`.
+
+Два решения, которые стоит знать:
+
+- **`user_cards.due` вынесен в отдельную колонку**, хотя полный FSRS-стейт лежит
+  рядом в JSON-поле `fsrs`. Фильтровать и индексировать ключ *внутри* JSON — криво
+  и по-разному работает на разных СУБД, а обычная колонка ведёт себя одинаково
+  везде. Репозиторий синхронизирует их при каждой записи.
+- **Все datetime хранятся через `UtcDateTime`** — свой `TypeDecorator`, который
+  приводит значение к tz-aware UTC и на запись, и на чтение. У SQLite нет типа
+  для даты, поэтому tz-aware значение вернулось бы naive, а смешение naive и aware
+  как раз ломало ревью карточек раньше.
+
+### Миграции
+
+Бот сам прогоняет `alembic upgrade head` при старте, так что руками обычно ничего
+не нужно. Для локальной работы со схемой:
+
+```bash
+make migrate                        # alembic upgrade head
+make revision m="add streak column" # autogenerate новой миграции
+```
+
+Тест `tests/test_migrations.py` падает, если модели разъехались с миграциями.
+
+### Переезд на Postgres
+
+Слой БД спрятан за репозиториями, а SQLAlchemy генерирует SQL под нужный диалект,
+поэтому смена движка — это установка `asyncpg` и одна переменная:
+
+```
+DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/recall_bot
+```
+
+`DATABASE_URL` перекрывает `DB_PATH`. Данные переливаются `pgloader` или разовым
+скриптом. Реально это нужно, только если появится несколько процессов, пишущих в
+одну базу, — для одного бота SQLite с запасом хватает.
+
 ## Архитектура
 
 ```
 bot/
-├── __main__.py            # entry point: dispatcher, scheduler, container
-├── config_data/config.py  # Settings, AsyncMongoClient, db
-├── constants.py           # имена коллекций, дефолты, CEFR
+├── __main__.py            # entry point: миграции, сид, dispatcher, scheduler
+├── config_data/config.py  # Settings, engine, session_factory
+├── constants.py           # имена состояний, дефолты, CEFR
 ├── container.py           # DI-контейнер репозиториев и сервисов
 ├── logging_setup.py       # configure_logging, log_user_action
+├── db/
+│   ├── models.py          # SQLAlchemy-модели + UtcDateTime
+│   ├── session.py         # async engine, session factory, SQLite PRAGMA
+│   ├── bootstrap.py       # alembic upgrade head при старте
+│   └── seed.py            # загрузка словаря из CSV
 ├── domain/
 │   ├── models.py          # Pydantic: User, Word, UserCard, ReviewLogEntry
 │   ├── srs.py             # FSRS wrapper + 4-state overlay
 │   ├── matching.py        # is_correct (Levenshtein==0)
 │   └── cefr.py            # frequency_rank → CEFR-уровень
-├── repositories/          # async CRUD на pymongo.AsyncMongoClient
+├── repositories/          # async CRUD на SQLAlchemy, возвращают dict
+│   ├── base.py            # BaseRepo + хелперы Row → dict
 │   ├── users_repo.py
 │   ├── words_repo.py
+│   ├── batches_repo.py
 │   ├── cards_repo.py
 │   └── review_log_repo.py
 ├── services/              # бизнес-логика
@@ -185,6 +243,8 @@ bot/
 │   ├── keyboards.py       # inline-клавиатуры
 │   └── i18n.py            # TranslatorHub
 └── locales/{ru,en}/LC_MESSAGES/txt.ftl
+
+alembic/                   # миграции схемы
 ```
 
 ## Тесты
@@ -193,78 +253,72 @@ bot/
 make test     # uv run pytest -v
 ```
 
-Покрытие: SRS state machine (graduation, lapse, counter), matching, batch progression, learning service (правильно/неправильно/transition), stats (accuracy, streak).
+Покрытие: SRS state machine (graduation, lapse, counter), matching, batch
+progression, learning service (правильно/неправильно/transition), stats
+(accuracy, streak), репозитории и соответствие миграций моделям.
 
-Все тесты — на in-memory репозиториях (см. `tests/conftest.py`), MongoDB не нужен.
+Тесты сервисов работают на in-memory репозиториях (см. `tests/conftest.py`).
+Тесты репозиториев (`tests/test_repositories.py`) поднимают настоящий SQLite во
+временном файле. Внешние сервисы не нужны.
 
 ## Переменные окружения
 
-| Переменная       | Описание                          | По умолчанию    |
-|------------------|-----------------------------------|-----------------|
-| `TOKEN`          | Токен бота от BotFather           | —               |
-| `MONGO_HOST`     | Хост MongoDB                      | `localhost`     |
-| `MONGO_PORT`     | Порт MongoDB                      | `27017`         |
-| `MONGO_DB_NAME`  | Имя базы                          | `bot_db`        |
-| `LOG_LEVEL`      | Уровень логирования               | `INFO`          |
-| `SCHEDULER_TZ`   | TZ APScheduler (для job стора)    | `UTC`           |
+| Переменная       | Описание                                            | По умолчанию          |
+|------------------|-----------------------------------------------------|-----------------------|
+| `TOKEN`          | Токен бота от BotFather                             | —                     |
+| `DB_PATH`        | Путь к файлу SQLite                                 | `recall_bot.db`       |
+| `DATABASE_URL`   | Полный SQLAlchemy URL, перекрывает `DB_PATH`        | —                     |
+| `DICTIONARY_CSV` | Словарь для автосида пустой базы                    | `data/dictionary.csv` |
+| `LOG_LEVEL`      | Уровень логирования                                 | `INFO`                |
+| `SCHEDULER_TZ`   | TZ APScheduler (влияет на время напоминаний)        | `UTC`                 |
 
-## CI/CD
+В Docker-образе `DB_PATH` переопределён на `/data/recall_bot.db`, чтобы база
+жила на смонтированном томе.
 
-GitHub Actions: build → GHCR push → SSH deploy. На сервере `.env`
-**пересоздаётся каждым деплоем** из CI-секретов (старый файл перезаписывается).
+## CI
 
-### Залить всё одной командой
+GitHub Actions (`.github/workflows/automation.yml`): прогон тестов на каждый push
+и PR, затем — только для `main` — сборка образа и push в GHCR.
 
-```bash
-cp .env.ci.example .env.ci
-# заполнить .env.ci
-make push-ci-config        # gh secret set -f + gh variable set -f
-```
+Образ в GHCR **не на пути деплоя**: Railway собирает из репозитория сам. Образ
+лежит, чтобы бота можно было поднять где угодно ещё.
 
-Требует [gh CLI](https://cli.github.com/) с `gh auth login`. `.env.ci` в `.gitignore`.
+## Деплой на Railway
 
-### Обязательные **Secrets** (`Settings → Secrets and variables → Actions → Secrets`)
+Бот — обычный worker без HTTP-порта. Нужен один always-on сервис и том под базу.
 
-| Секрет             | Что                                                |
-|--------------------|----------------------------------------------------|
-| `BOT_TOKEN`        | Токен бота от @BotFather → станет `TOKEN` в `.env` |
-| `MONGO_URI`        | Опционально. Полный URI с auth, e.g. `mongodb://u:p@host:27017/?authSource=admin`. Если пусто — собирается из MONGO_HOST/PORT. |
-| `SSH_HOST`         | IP/домен сервера                                   |
-| `SSH_USER`         | SSH-пользователь                                   |
-| `SSH_PRIVATE_KEY`  | Приватный ключ (содержимое целиком, OpenSSH-формат)|
-| `SSH_PORT`         | Порт SSH                                           |
-| `DEPLOY_PATH`      | Путь к репозиторию на сервере (`/home/u/recall_bot`)|
+1. **Создать сервис.** railway.com → *New Project* → *Deploy from GitHub repo* →
+   выбрать этот репозиторий. `railway.json` уже указывает собирать `Dockerfile`.
+2. **Подключить том.** В сервисе → *Volumes* → добавить том с mount path `/data`.
+   Лучше сделать это до первого деплоя: `DB_PATH` в образе указывает на
+   `/data/recall_bot.db`, и без тома база пропадёт при следующем деплое.
+3. **Задать переменные.** В *Variables*:
 
-### Опциональные **Variables** (`… → Variables`)
+   | Переменная     | Значение                         |
+   |----------------|----------------------------------|
+   | `TOKEN`        | токен от @BotFather              |
+   | `SCHEDULER_TZ` | например `Europe/Moscow`         |
+   | `LOG_LEVEL`    | `INFO` (опционально)             |
 
-| Variable         | Назначение                                     | Default                  |
-|------------------|------------------------------------------------|--------------------------|
-| `MONGO_HOST`     | Хост mongo (как видит контейнер бота)          | `host.docker.internal`   |
-| `MONGO_PORT`     | Порт mongo                                     | `27017`                  |
-| `MONGO_DB_NAME`  | Имя БД                                         | `recall_bot`             |
-| `LOG_LEVEL`      | Уровень логов                                  | `INFO`                   |
-| `SCHEDULER_TZ`   | TZ для APScheduler (см. tzdata)                | `UTC`                    |
+   `DB_PATH` задавать не нужно — он уже `/data/recall_bot.db` из `Dockerfile`.
+4. **Задеплоить и проверить логи.** На первом старте должно быть
+   `migrations_applied`, затем `dictionary_seeded words=20070` и `Bot starting...`.
+   Сид ~20k слов идёт несколько секунд и происходит один раз.
 
-### Mongo
+Дальше каждый push в `main` пересобирает и передеплоивает сервис.
 
-`docker-compose.yml` **не** поднимает mongo. Бот запущен в
-`network_mode: host` (Linux) — он шарит сетевой стек хоста, поэтому
-`MONGO_HOST=127.0.0.1` указывает на хостовую mongo напрямую, минуя
-DNS docker'а и проблемы с `bindIp`. Для прода с auth — `MONGO_URI`.
+> ⚠️ **Нельзя держать два инстанса на одном токене.** Telegram отдаёт
+> `409 Conflict`, если по одному токену идёт long polling из двух мест. Перед
+> запуском на Railway останови старый контейнер бота, где бы он ни крутился.
 
-Если нужно поднять mongo в compose (dev-стенд без хостовой БД) или
-бежать на Mac/Windows (где `network_mode: host` не работает) — убери
-`network_mode`, добавь сервис mongo и переключи `MONGO_HOST=mongo`.
+### Забрать базу с Railway
 
-### Что нужно на сервере один раз
+SQLite — один файл, так что база переносится копированием. Через
+[Railway CLI](https://docs.railway.com/develop/cli):
 
 ```bash
-git clone git@github.com:<you>/recall_bot.git ~/dev/recall_bot
-cd ~/dev/recall_bot
-# первый раз .env пустой — деплой его создаст
-docker compose pull          # подтянет образ из ghcr (после первого CI run)
+railway ssh 'sqlite3 /data/recall_bot.db ".backup /data/snapshot.db"'
 ```
 
-Если пакет на GHCR приватный — на сервере один раз залогиниться:
-`echo "<PAT>" | docker login ghcr.io -u <username> --password-stdin`,
-где PAT с `read:packages`. Публичный пакет — авторизация не нужна.
+Снимать копию именно через `.backup`, а не `cp`: в WAL-режиме рядом лежат
+`-wal`/`-shm`, и сырое копирование живого файла может дать неконсистентный снимок.

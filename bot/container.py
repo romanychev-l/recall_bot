@@ -45,12 +45,12 @@ def build_container(
     review_log_repo = ReviewLogRepo(session_factory)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
-    onboarding = OnboardingService(users_repo, batch)
+    reminder = ReminderService(scheduler, users_repo, send_reminder)
+    onboarding = OnboardingService(users_repo, batch, reminder)
     learning = LearningService(
         users_repo, words_repo, cards_repo, review_log_repo, srs, batch
     )
     stats = StatsService(users_repo, cards_repo, review_log_repo)
-    reminder = ReminderService(scheduler, users_repo, send_reminder)
     return Container(
         users_repo=users_repo,
         words_repo=words_repo,

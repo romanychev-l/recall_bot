@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from bot.repositories.users_repo import UsersRepo
 from bot.services.batch_service import BatchService
+from bot.services.reminder_service import ReminderService
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,11 @@ class OnboardingService:
         self,
         users_repo: UsersRepo,
         batch_service: BatchService,
+        reminder_service: ReminderService,
     ) -> None:
         self.users_repo = users_repo
         self.batch_service = batch_service
+        self.reminder_service = reminder_service
 
     async def start(
         self,
@@ -41,6 +44,7 @@ class OnboardingService:
 
         if user.get("current_batch_id") is None:
             await self.batch_service.issue_next_batch(user, now=datetime.now(timezone.utc))
+        self.reminder_service.schedule_user(user)
         logger.info(
             "user_onboarded user_id=%s initial_rank=%s batch_size=%s",
             telegram_id, user["initial_rank"], user["batch_size"],

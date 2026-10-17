@@ -47,6 +47,10 @@ class ReminderService:
             id=_job_id(user["id"]),
             replace_existing=True,
         )
+        logger.info(
+            "reminder_scheduled user_id=%s time=%s tz=%s",
+            user["id"], user["reminder_time"], user["tz"],
+        )
 
     def cancel_user(self, user_id: int) -> None:
         try:

@@ -14,8 +14,8 @@ message-ask_skip_n =
 message-bad_skip_n = Need an integer from 0 to 100000.
 message-try_learn_hint = Use /learn to start a session.
 message-not_onboarded = First use /start.
-message-nothing_due = Nothing to review — all cards are on intervals. Come back later!
-message-session_done = Session complete. /stats — see progress.
+message-nothing_due = Nothing is due for review right now. Want to continue? Tap “More words” or use /more.
+message-session_done = Session complete! Continue learning or add new words with “More words” or /more. /stats — see progress.
 message-prompt_word =
     Translate to English: <b>{ $translation }</b>
 
@@ -28,9 +28,9 @@ message-skipped_today = Skipped until tomorrow
 message-marked_hard = Marked as hard
 message-skip_only_inline = /skip works via the card button.
 message-hard_only_inline = /hard works via the card button.
-message-unknown_command = I don't understand. Commands: /start /learn /cram /stats /settings
-message-cram_started = 🚀 Cram session: { $n } new words.
-message-cram_bad_n = /cram N — number from 1 to 500.
+message-unknown_command = I don't understand. Commands: /start /learn /more /stats /settings /help
+message-cram_started = Added { $n } new words. Let’s start!
+message-cram_bad_n = Use /more or /more N, where N is an integer from 1 to 500. /cram N also works.
 message-no_more_words = No more words in the dictionary 🎉
 message-settings_summary =
     Settings:
@@ -38,6 +38,8 @@ message-settings_summary =
     • Batch size: { $batch }
     • Reminder time: { $reminder }
     • Timezone: { $tz }
+    • Parts of speech: { $parts }
+    • New words remaining: { $count }
 
     What to change?
 message-ask_batch_size = Enter batch size (1–100):
@@ -57,18 +59,32 @@ message-stats_summary =
 
     Accuracy (7d): { $accuracy }
     Streak: { $streak }
-    Next new word at rank #{ $next_rank }
+    Next new word matching your filter: { $next_rank }
 
     CEFR progress (review + graduated):
     { $cefr }
+message-pos_summary =
+    <b>Parts of speech</b>
+
+    Selected: { $parts }
+    New words remaining: <b>{ $count }</b>
+
+    From “All”, tap a category to select just that one. Then tap categories to add or remove them. Changes save immediately; keep at least one category selected.
+    The filter applies to new words and reviews. Hidden cards keep their progress and intervals and return when their categories are selected. Each card keeps the meanings it was issued with.
+    The counter includes words after your starting level that do not have a card yet. Previously issued words are excluded.
+message-pos_empty = Select at least one part of speech. Tap “All parts of speech” to restore the full dictionary.
+message-no_matching_words = No new words match the selected parts of speech. Change your selection in /settings. Existing cards and progress are preserved.
+message-nothing_due_filtered = No matching cards are due right now. Add new words with /more or change parts of speech in /settings. Hidden cards and their progress are preserved.
 message-help =
     📖 Commands:
 
-    /learn — session: due cards + new from active batch
+    /learn — continue learning: reviews and all unfinished batches
+    /more <code>N</code> — add new words and start learning immediately;
+       without a number — your batch size, with a number — 1 to 500 words
     /cram <code>N</code> — force-session of N new words (default 50, max 500),
        bypasses batch/daily_goal — handy for clicking through familiar words
     /stats — progress: today / learning / graduated / CEFR
-    /settings — batch size, reminder time, timezone
+    /settings — parts of speech, batch size, reminder time, timezone
     /start — restart onboarding (change starting rank)
     /help — this message
 
@@ -86,3 +102,32 @@ button-dont_know = 🤔 Don't know
 button-settings_batch = Batch size
 button-settings_reminder = Reminder time
 button-settings_tz = Timezone
+button-settings_pos = Parts of speech
+button-pos_all = All parts of speech
+button-pos_done = Done
+pos-noun = Nouns
+pos-verb = Verbs
+pos-adj = Adjectives
+pos-adv = Adverbs
+pos-pron = Pronouns
+pos-num = Numerals
+pos-prep = Prepositions
+pos-conj = Conjunctions
+pos-det = Determiners
+pos-intj = Interjections
+pos-particle = Particles
+pos-name = Proper names
+pos-phrase = Expressions
+pos-other = Other / unclassified
+
+button-more_words = ➕ More words
+button-continue_learning = ▶️ Continue
+command-learn = Continue learning
+command-more = Add new words
+command-stats = My progress
+command-settings = Learning settings
+command-help = Command help
+command-start = Choose starting level
+command-cram = Add 50 new words or specify a number
+command-skip = How to skip a word
+command-hard = How to mark a difficult word

@@ -13,6 +13,7 @@ from bot.constants import (
     DEFAULT_TZ,
 )
 from bot.db.models import User
+from bot.domain.parts_of_speech import validate_pos_filter
 from bot.repositories.base import BaseRepo, one, rows
 
 
@@ -65,6 +66,8 @@ class UsersRepo(BaseRepo):
     async def update(self, telegram_id: int, **fields: Any) -> None:
         if not fields:
             return
+        if "pos_filter" in fields:
+            validate_pos_filter(fields["pos_filter"])
         async with self._sf() as s:
             await s.execute(
                 update(User).where(User.id == telegram_id).values(**fields)

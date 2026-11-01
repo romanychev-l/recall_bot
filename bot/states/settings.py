@@ -6,3 +6,4 @@ class SettingsSG(StatesGroup):
     edit_batch_size = State()
     edit_reminder_time = State()
     edit_tz = State()
+    edit_pos = State()

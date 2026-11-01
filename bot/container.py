@@ -10,6 +10,8 @@ from bot.repositories.cards_repo import CardsRepo
 from bot.repositories.review_log_repo import ReviewLogRepo
 from bot.repositories.users_repo import UsersRepo
 from bot.repositories.words_repo import WordsRepo
+from bot.repositories.groups_repo import GroupsRepo
+from bot.services.group_service import GroupService
 from bot.services.batch_service import BatchService
 from bot.services.learning_service import LearningService
 from bot.services.onboarding_service import OnboardingService
@@ -30,6 +32,7 @@ class Container:
     learning: LearningService
     stats: StatsService
     reminder: ReminderService
+    groups: GroupService
 
 
 def build_container(
@@ -37,6 +40,7 @@ def build_container(
     *,
     scheduler,
     send_reminder,
+    bot=None,
 ) -> Container:
     users_repo = UsersRepo(session_factory)
     words_repo = WordsRepo(session_factory)
@@ -63,4 +67,5 @@ def build_container(
         learning=learning,
         stats=stats,
         reminder=reminder,
+        groups=GroupService(bot, GroupsRepo(session_factory), scheduler),
     )

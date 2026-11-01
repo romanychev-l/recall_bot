@@ -40,6 +40,7 @@ from bot.constants import (
     DEFAULT_TZ,
     STATE_NEW,
 )
+from bot.domain.parts_of_speech import ALL_POS
 
 # Explicit constraint names — Alembic's SQLite batch mode needs them to rebuild
 # tables, since SQLite cannot drop an unnamed constraint.
@@ -97,6 +98,7 @@ class User(Base):
     reminder_time: Mapped[str] = mapped_column(String(5), default=DEFAULT_REMINDER_TIME)
     tz: Mapped[str] = mapped_column(String(64), default=DEFAULT_TZ)
     language: Mapped[str] = mapped_column(String(8), default="ru")
+    pos_filter: Mapped[int] = mapped_column(Integer, default=ALL_POS, server_default=str(ALL_POS))
     initial_rank: Mapped[int] = mapped_column(Integer, default=0)
     current_batch_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     next_batch_start_rank: Mapped[int] = mapped_column(Integer, default=0)
@@ -129,6 +131,17 @@ class Batch(Base):
     created_at: Mapped[datetime] = mapped_column(UtcDateTime)
 
 
+class WordSense(Base):
+    __tablename__ = "word_senses"
+
+    word_id: Mapped[int] = mapped_column(
+        ForeignKey("words.id", ondelete="CASCADE"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    translation: Mapped[str] = mapped_column(Text)
+    pos_mask: Mapped[int] = mapped_column(Integer)
+
+
 class UserCard(Base):
     __tablename__ = "user_cards"
 
@@ -139,6 +152,7 @@ class UserCard(Base):
     word_id: Mapped[int] = mapped_column(ForeignKey("words.id", ondelete="CASCADE"))
     batch_id: Mapped[int] = mapped_column(ForeignKey("batches.id", ondelete="CASCADE"))
     frequency_rank: Mapped[int] = mapped_column(Integer)
+    study_pos_filter: Mapped[int] = mapped_column(Integer, default=ALL_POS, server_default=str(ALL_POS))
     # Full FSRS state. Datetimes inside are ISO strings — SrsService already
     # parses those back (see _card_from_doc).
     fsrs: Mapped[dict[str, Any]] = mapped_column(JSON)
@@ -182,3 +196,37 @@ class ReviewLog(Base):
     __table_args__ = (
         Index("ix_review_log_user_id_reviewed_at", "user_id", "reviewed_at"),
     )
+
+
+class GroupChat(Base):
+    __tablename__ = "group_chats"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    title: Mapped[str] = mapped_column(String(255))
+    creator_id: Mapped[int] = mapped_column(BigInteger)
+    timezone: Mapped[str] = mapped_column(String(64))
+    report_time: Mapped[str] = mapped_column(String(5), default="21:00")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    bot_present: Mapped[bool] = mapped_column(Boolean, default=True)
+    thread_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    message_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    next_report_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+    __table_args__ = (
+        Index("ix_group_chats_enabled_bot_present_next_report_at", "enabled", "bot_present", "next_report_at"),
+    )
+
+
+class GroupMember(Base):
+    __tablename__ = "group_members"
+
+    chat_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("group_chats.id", ondelete="CASCADE", onupdate="CASCADE"),
+        primary_key=True,
+    )
+    # Joining a group does not require starting private onboarding first.
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    display_name: Mapped[str] = mapped_column(String(64))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    joined_at: Mapped[datetime] = mapped_column(UtcDateTime)

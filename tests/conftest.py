@@ -25,6 +25,7 @@ from bot.constants import (  # noqa: E402
 )
 from bot.db.models import Base  # noqa: E402
 from bot.db.session import build_engine, build_session_factory  # noqa: E402
+from bot.domain.parts_of_speech import ALL_POS, pos_mask  # noqa: E402
 
 
 @pytest.fixture
@@ -57,6 +58,7 @@ class InMemoryUsersRepo:
             "reminder_time": DEFAULT_REMINDER_TIME,
             "tz": DEFAULT_TZ,
             "language": language,
+            "pos_filter": ALL_POS,
             "initial_rank": initial_rank,
             "current_batch_id": None,
             "next_batch_start_rank": initial_rank,
@@ -84,10 +86,12 @@ class InMemoryWordsRepo:
         self.words = words or []
         self.cards_repo = cards_repo
 
-    async def next_available(self, user_id, min_rank, n):
+    async def next_available(self, user_id, min_rank, n, pos_filter=ALL_POS):
         issued = {card["word_id"] for card in self.cards_repo.docs if card["user_id"] == user_id}
-        return [word for word in await self.next_n_with_rank_gte(min_rank, len(self.words))
-                if word["id"] not in issued][:n]
+        candidates = sorted((word for word in self.words if word["frequency_rank"] >= min_rank
+                             and word["id"] not in issued and pos_mask(word["pos"]) & pos_filter),
+                            key=lambda word: word["frequency_rank"])
+        return candidates[:n]
 
     async def by_id(self, word_id):
         for w in self.words:
@@ -151,6 +155,7 @@ class InMemoryCardsRepo:
                 "word_id": w["id"],
                 "batch_id": batch_id,
                 "frequency_rank": w["frequency_rank"],
+                "study_pos_filter": w.get("study_pos_filter", ALL_POS),
                 "fsrs": fsrs,
                 "due": fsrs["due"],
                 "my_state": STATE_NEW,
@@ -191,7 +196,7 @@ class InMemoryCardsRepo:
         if d is not None:
             d["skip_until"] = until
 
-    async def count_pending_in_batch(self, user_id, batch_id):
+    async def count_pending_in_batch(self, user_id, batch_id, pos_filter=ALL_POS):
         return sum(
             1 for d in self.docs
             if d["user_id"] == user_id
@@ -199,7 +204,7 @@ class InMemoryCardsRepo:
             and d["my_state"] in (STATE_NEW, STATE_LEARNING)
         )
 
-    async def find_due(self, user_id, now, limit):
+    async def find_due(self, user_id, now, limit, pos_filter=ALL_POS):
         candidates = [
             d for d in self.docs
             if d["user_id"] == user_id
@@ -216,6 +221,16 @@ class InMemoryCardsRepo:
             if d["user_id"] == user_id
             and d["batch_id"] == batch_id
             and d["my_state"] == STATE_NEW
+        ]
+        candidates.sort(key=lambda d: d["frequency_rank"])
+        return candidates[:limit]
+
+    async def find_new(self, user_id, now, limit, pos_filter=ALL_POS):
+        candidates = [
+            d for d in self.docs
+            if d["user_id"] == user_id
+            and d["my_state"] == STATE_NEW
+            and (d["skip_until"] is None or d["skip_until"] <= now)
         ]
         candidates.sort(key=lambda d: d["frequency_rank"])
         return candidates[:limit]

@@ -8,6 +8,7 @@ from typing import Optional
 
 from bot.constants import RESULT_AGAIN, RESULT_GOOD, STATE_LEARNING, STATE_REVIEW
 from bot.domain.matching import is_correct
+from bot.domain.parts_of_speech import ALL_POS
 from bot.domain.srs import SrsService
 from bot.repositories.cards_repo import CardsRepo
 from bot.repositories.review_log_repo import ReviewLogRepo
@@ -52,13 +53,12 @@ class LearningService:
     ) -> list[dict]:
         now = now or datetime.now(timezone.utc)
         cap = cap or user.get("daily_goal", user["batch_size"])
-        due = await self.cards_repo.find_due(user["id"], now, cap)
+        pos_filter = user.get("pos_filter", ALL_POS)
+        due = await self.cards_repo.find_due(user["id"], now, cap, pos_filter)
         remaining = max(0, cap - len(due))
         new_cards: list[dict] = []
-        if user.get("current_batch_id") is not None and remaining > 0:
-            new_cards = await self.cards_repo.find_new_in_batch(
-                user["id"], user["current_batch_id"], remaining
-            )
+        if remaining > 0:
+            new_cards = await self.cards_repo.find_new(user["id"], now, remaining, pos_filter)
         session = list(due) + list(new_cards)
         random.shuffle(session)
         return session

@@ -136,8 +136,8 @@ def build_kaikki_index(
     POS would drop the dominant adv meaning. So we accumulate across
     ALL POS entries for a word — up to MAX_PER_ENTRY per entry,
     MAX_TOTAL overall. POS label on the row is the one with highest
-    POS_PRIORITY (used downstream for display only, doesn't affect
-    matching).
+    POS_PRIORITY. This legacy row label cannot classify individual translations;
+    run data.build_word_senses to build the meaning-level filter metadata.
     """
     out: dict[str, dict] = {}
 

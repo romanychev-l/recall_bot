@@ -6,6 +6,7 @@ from aiogram.types import Message
 from fluentogram import TranslatorRunner
 
 from bot.container import Container
+from bot.domain.parts_of_speech import ALL_POS
 
 router = Router(name="stats")
 
@@ -30,6 +31,10 @@ async def cmd_stats(
         f"  {level}: {v['graduated']}/{v['total']}"
         for level, v in cefr.items()
     )
+    next_words = await container.words_repo.next_available(
+        uid, user["initial_rank"], 1, user.get("pos_filter", ALL_POS)
+    )
+    next_rank = f"#{next_words[0]['frequency_rank']}" if next_words else "—"
     text = i18n.message.stats_summary(
         learning=counts.get("learning", 0),
         review=counts.get("review", 0),
@@ -38,7 +43,7 @@ async def cmd_stats(
         today_total=today_total,
         accuracy=f"{accuracy * 100:.0f}%" if today_total > 0 or counts.get("review", 0) > 0 else "—",
         streak=streak,
-        next_rank=user.get("next_batch_start_rank", 0),
+        next_rank=next_rank,
         cefr=cefr_lines,
     )
     await message.answer(text)

@@ -11,9 +11,11 @@ from bot.constants import (
     STATE_NEW,
     STATE_REVIEW,
 )
-from bot.db.models import UserCard
+from bot.db.models import UserCard, Word
+from bot.domain.parts_of_speech import ALL_POS
 from bot.domain.srs import card_due
 from bot.repositories.base import BaseRepo, one, rows
+from bot.repositories.word_filters import matches_parts
 
 
 def _fsrs_for_storage(fsrs: dict[str, Any]) -> dict[str, Any]:
@@ -70,6 +72,7 @@ class CardsRepo(BaseRepo):
                 "word_id": w["id"],
                 "batch_id": batch_id,
                 "frequency_rank": w["frequency_rank"],
+                "study_pos_filter": w.get("study_pos_filter", ALL_POS),
                 "fsrs": fsrs,
                 "due": card_due(fsrs),
                 "my_state": STATE_NEW,
@@ -133,29 +136,33 @@ class CardsRepo(BaseRepo):
             )
             await s.commit()
 
-    async def count_pending_in_batch(self, user_id: int, batch_id: int) -> int:
+    async def count_pending_in_batch(self, user_id: int, batch_id: int, pos_filter: int = ALL_POS) -> int:
         async with self._sf() as s:
             res = await s.execute(
                 select(func.count())
                 .select_from(UserCard.__table__)
+                .join(Word, Word.id == UserCard.word_id)
                 .where(
                     UserCard.user_id == user_id,
                     UserCard.batch_id == batch_id,
                     UserCard.my_state.in_([STATE_NEW, STATE_LEARNING]),
+                    matches_parts(UserCard.study_pos_filter.bitwise_and(pos_filter)),
                 )
             )
             return int(res.scalar_one())
 
     async def find_due(
-        self, user_id: int, now: datetime, limit: int
+        self, user_id: int, now: datetime, limit: int, pos_filter: int = ALL_POS
     ) -> list[dict[str, Any]]:
         async with self._sf() as s:
             res = await s.execute(
                 select(UserCard.__table__)
+                .join(Word, Word.id == UserCard.word_id)
                 .where(
                     UserCard.user_id == user_id,
                     UserCard.my_state.in_([STATE_LEARNING, STATE_REVIEW]),
                     UserCard.due <= now,
+                    matches_parts(UserCard.study_pos_filter.bitwise_and(pos_filter)),
                     or_(
                         UserCard.skip_until.is_(None),
                         UserCard.skip_until <= now,
@@ -170,15 +177,36 @@ class CardsRepo(BaseRepo):
             return rows(res)
 
     async def find_new_in_batch(
-        self, user_id: int, batch_id: int, limit: int
+        self, user_id: int, batch_id: int, limit: int, pos_filter: int = ALL_POS
     ) -> list[dict[str, Any]]:
         async with self._sf() as s:
             res = await s.execute(
                 select(UserCard.__table__)
+                .join(Word, Word.id == UserCard.word_id)
                 .where(
                     UserCard.user_id == user_id,
                     UserCard.batch_id == batch_id,
                     UserCard.my_state == STATE_NEW,
+                    matches_parts(UserCard.study_pos_filter.bitwise_and(pos_filter)),
+                )
+                .order_by(UserCard.frequency_rank.asc())
+                .limit(limit)
+            )
+            return rows(res)
+
+    async def find_new(
+        self, user_id: int, now: datetime, limit: int, pos_filter: int = ALL_POS
+    ) -> list[dict[str, Any]]:
+        """Include unfinished older batches after the user requests more words."""
+        async with self._sf() as s:
+            res = await s.execute(
+                select(UserCard.__table__)
+                .join(Word, Word.id == UserCard.word_id)
+                .where(
+                    UserCard.user_id == user_id,
+                    UserCard.my_state == STATE_NEW,
+                    matches_parts(UserCard.study_pos_filter.bitwise_and(pos_filter)),
+                    or_(UserCard.skip_until.is_(None), UserCard.skip_until <= now),
                 )
                 .order_by(UserCard.frequency_rank.asc())
                 .limit(limit)

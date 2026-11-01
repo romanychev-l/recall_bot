@@ -53,7 +53,7 @@ async def onboard_ask_skip_n(
     await callback.answer()
 
 
-@router.message(OnboardSG.enter_skip_n)
+@router.message(OnboardSG.enter_skip_n, ~F.text.startswith("/"))
 async def onboard_apply_skip_n(
     message: Message,
     state: FSMContext,

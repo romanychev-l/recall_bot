@@ -5,17 +5,19 @@ from pathlib import Path
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.storage.memory import SimpleEventIsolation
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fluentogram import TranslatorHub
 
 from bot.config_data.config import config_settings, engine, session_factory
 from bot.container import build_container
 from bot.db.bootstrap import run_migrations
-from bot.db.seed import seed_if_empty
+from bot.db.seed import seed_if_empty, seed_word_senses
 from bot.db.session import check_connection
 from bot.handlers.actions import router as actions_router
 from bot.handlers.fallback import router as fallback_router
 from bot.handlers.help import router as help_router
+from bot.handlers.groups import router as group_router
 from bot.handlers.learn import router as learn_router
 from bot.handlers.settings import router as settings_router
 from bot.handlers.start import router as start_router
@@ -25,6 +27,7 @@ from bot.middlewares.container import ContainerMiddleware
 from bot.middlewares.i18n import TranslatorRunnerMiddleware
 from bot.scheduler.jobs import daily_reminder
 from bot.utils.i18n import create_translator_hub
+from bot.utils.commands import register_commands
 
 configure_logging(config_settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -35,12 +38,14 @@ async def main() -> None:
     await run_migrations(config_settings.database_url)
     await check_connection(engine)
     await seed_if_empty(session_factory, Path(config_settings.DICTIONARY_CSV))
+    dictionary_csv = Path(config_settings.DICTIONARY_CSV)
+    await seed_word_senses(session_factory, dictionary_csv.with_name(dictionary_csv.stem + "_senses.csv"))
 
     bot = Bot(
         token=config_settings.TOKEN.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dp = Dispatcher()
+    dp = Dispatcher(events_isolation=SimpleEventIsolation())
 
     translator_hub: TranslatorHub = create_translator_hub()
 
@@ -55,10 +60,11 @@ async def main() -> None:
         await daily_reminder(bot, c, user_id)
 
     container = build_container(
-        session_factory, scheduler=scheduler, send_reminder=send_reminder
+        session_factory, scheduler=scheduler, send_reminder=send_reminder, bot=bot
     )
     container_ref["container"] = container
 
+    dp.include_router(group_router)
     dp.include_router(start_router)
     dp.include_router(help_router)
     dp.include_router(learn_router)
@@ -70,11 +76,13 @@ async def main() -> None:
     dp.update.middleware(ContainerMiddleware(container))
     dp.update.middleware(TranslatorRunnerMiddleware())
 
+    container.groups.start()
     scheduler.start()
     await container.reminder.reschedule_all()
     logger.info("Bot starting...")
 
     try:
+        await register_commands(bot, translator_hub)
         await dp.start_polling(bot, _translator_hub=translator_hub)
     finally:
         scheduler.shutdown(wait=False)

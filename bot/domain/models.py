@@ -12,6 +12,7 @@ from bot.constants import (
     DEFAULT_TZ,
     STATE_NEW,
 )
+from bot.domain.parts_of_speech import ALL_POS
 
 
 class _Model(BaseModel):
@@ -25,6 +26,7 @@ class User(_Model):
     reminder_time: str = DEFAULT_REMINDER_TIME
     tz: str = DEFAULT_TZ
     language: str = "ru"
+    pos_filter: int = ALL_POS
     initial_rank: int = 0
     current_batch_id: Optional[int] = None
     next_batch_start_rank: int = 0
@@ -49,6 +51,7 @@ class UserCard(_Model):
     word_id: int
     batch_id: int
     frequency_rank: int
+    study_pos_filter: int = ALL_POS
     fsrs: dict[str, Any]
     due: datetime
     my_state: str = STATE_NEW

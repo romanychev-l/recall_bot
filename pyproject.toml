@@ -3,7 +3,8 @@ name = "recall-bot"
 version = "0.1.0"
 description = "Telegram bot for learning English vocabulary via spaced repetition (FSRS)."
 readme = "README.md"
-requires-python = ">=3.13"
+# fluent-compiler 1.1 uses AST arguments removed in Python 3.15.
+requires-python = ">=3.13,<3.15"
 dependencies = [
     "aiogram>=3.26,<4",
     "sqlalchemy[asyncio]>=2.0,<3",

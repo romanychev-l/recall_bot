@@ -337,6 +337,9 @@ alembic/                   # миграции схемы
 make test     # uv run pytest -v
 ```
 
+Поддерживаются Python 3.13–3.14. Файл `.python-version`, CI и Docker-образ
+используют 3.14: текущая версия `fluent-compiler` несовместима с Python 3.15.
+
 Покрытие: SRS state machine (graduation, lapse, counter), matching, batch
 progression, learning service (правильно/неправильно/transition), stats
 (accuracy, streak), репозитории и соответствие миграций моделям.

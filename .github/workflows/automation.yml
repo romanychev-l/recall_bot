@@ -18,6 +18,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          python-version: "3.14"
 
       - name: Run tests
         env:

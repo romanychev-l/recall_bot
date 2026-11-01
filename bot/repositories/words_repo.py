@@ -4,11 +4,25 @@ from typing import Any, Optional
 
 from sqlalchemy import func, select
 
-from bot.db.models import Word
+from bot.db.models import UserCard, Word
 from bot.repositories.base import BaseRepo, one, rows
 
 
 class WordsRepo(BaseRepo):
+    async def next_available(self, user_id: int, min_rank: int, n: int) -> list[dict[str, Any]]:
+        """Most frequent unseen words, independent of a stale batch cursor."""
+        async with self._sf() as s:
+            res = await s.execute(
+                select(Word.__table__)
+                .where(
+                    Word.frequency_rank >= min_rank,
+                    ~select(1).where(UserCard.user_id == user_id, UserCard.word_id == Word.id).exists(),
+                )
+                .order_by(Word.frequency_rank.asc())
+                .limit(n)
+            )
+            return rows(res)
+
     async def by_id(self, word_id: int) -> Optional[dict[str, Any]]:
         async with self._sf() as s:
             res = await s.execute(select(Word.__table__).where(Word.id == word_id))

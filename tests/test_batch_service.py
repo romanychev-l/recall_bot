@@ -13,7 +13,7 @@ from tests.conftest import InMemoryWordsRepo, make_words
 @pytest.mark.asyncio
 async def test_issue_first_batch(users_repo, cards_repo, batches_repo) -> None:
     words = make_words(50)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
 
@@ -38,7 +38,7 @@ async def test_maybe_issue_next_batch_no_op_if_pending(
     users_repo, cards_repo, batches_repo
 ) -> None:
     words = make_words(20)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     await users_repo.create_if_absent(1)
@@ -58,7 +58,7 @@ async def test_maybe_issue_next_batch_progresses_when_all_review(
     users_repo, cards_repo, batches_repo
 ) -> None:
     words = make_words(20)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     await users_repo.create_if_absent(1)

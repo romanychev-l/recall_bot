@@ -7,7 +7,7 @@ Usage:
     python -m data.seed data/dictionary.csv
     python -m data.seed data/fixtures/test_words.csv
 
-Upserts by frequency_rank (unique), so re-runs are safe. The bot also seeds an
+Upserts by English word, preserving IDs and progress across rank changes. The bot also seeds an
 empty database on startup; use this to refresh or extend an existing one.
 """
 from __future__ import annotations

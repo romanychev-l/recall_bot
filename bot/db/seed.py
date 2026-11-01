@@ -10,10 +10,11 @@ import logging
 from pathlib import Path
 from typing import Any, Iterator
 
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from bot.db.models import Word
+from bot.db.dictionary_sync import apply_dictionary
 
 logger = logging.getLogger(__name__)
 
@@ -55,44 +56,33 @@ async def count_words(session_factory: async_sessionmaker) -> int:
 async def seed_from_csv(
     session_factory: async_sessionmaker, csv_path: Path
 ) -> tuple[int, int]:
-    """Upsert words keyed by frequency_rank. Returns (inserted, updated).
-
-    Uses plain inserts/updates rather than a dialect-specific ON CONFLICT, so it
-    behaves the same on SQLite and Postgres.
-    """
-    # Last row wins if a CSV repeats a rank — the unique index would reject it.
-    deduped = {row["frequency_rank"]: row for row in read_rows(csv_path)}
-    if not deduped:
+    """Upsert by English word, preserving IDs, cards and review history."""
+    entries = list(read_rows(csv_path))
+    if not entries:
         return 0, 0
     async with session_factory() as s:
-        result = await s.execute(select(Word.id, Word.frequency_rank))
-        existing = {rank: word_id for word_id, rank in result.all()}
-        to_insert = [row for rank, row in deduped.items() if rank not in existing]
-        to_update = [
-            {"id": existing[rank], **row}
-            for rank, row in deduped.items()
-            if rank in existing
-        ]
-        if to_insert:
-            await s.execute(insert(Word), to_insert)
-        if to_update:
-            # ORM bulk update by primary key.
-            await s.execute(update(Word), to_update)
+        result = await apply_dictionary(s, entries, update_content=True)
         await s.commit()
-    return len(to_insert), len(to_update)
+    return result
 
 
 async def seed_if_empty(
     session_factory: async_sessionmaker, csv_path: Path
 ) -> int:
-    """Seed a fresh database; no-op once any word exists.
+    """Seed a fresh database or sync ranks of known words on an existing one.
 
-    A deployment starts with an empty volume, so without this the bot would come
-    up with nothing to teach.
+    Existing translations and word IDs are preserved. The rank update and card
+    rank mirrors are committed together before the bot accepts any updates.
     """
     existing = await count_words(session_factory)
     if existing:
-        logger.info("dictionary_present words=%s", existing)
+        if csv_path.exists():
+            async with session_factory() as s:
+                _, updated = await apply_dictionary(s, list(read_rows(csv_path)), update_content=False)
+                await s.commit()
+            logger.info("dictionary_ranks_synced words=%s updated=%s", existing, updated)
+        else:
+            logger.warning("dictionary_csv_missing path=%s", csv_path)
         return 0
     if not csv_path.exists():
         logger.warning("dictionary_csv_missing path=%s", csv_path)

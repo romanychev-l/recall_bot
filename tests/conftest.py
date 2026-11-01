@@ -80,8 +80,14 @@ class InMemoryUsersRepo:
 
 
 class InMemoryWordsRepo:
-    def __init__(self, words: Optional[list[dict[str, Any]]] = None) -> None:
+    def __init__(self, words: Optional[list[dict[str, Any]]] = None, *, cards_repo=None) -> None:
         self.words = words or []
+        self.cards_repo = cards_repo
+
+    async def next_available(self, user_id, min_rank, n):
+        issued = {card["word_id"] for card in self.cards_repo.docs if card["user_id"] == user_id}
+        return [word for word in await self.next_n_with_rank_gte(min_rank, len(self.words))
+                if word["id"] not in issued][:n]
 
     async def by_id(self, word_id):
         for w in self.words:

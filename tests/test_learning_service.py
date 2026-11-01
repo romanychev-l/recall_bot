@@ -16,7 +16,7 @@ async def test_evaluate_correct_answer_updates_state(
     users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(5)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
@@ -43,7 +43,7 @@ async def test_evaluate_wrong_answer_logs_again(
     users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(3)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
@@ -67,7 +67,7 @@ async def test_batch_advances_when_all_pass_first_interval(
     users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(6)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
@@ -103,7 +103,7 @@ async def test_build_session_orders_hard_first(
     users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(6)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(
@@ -133,7 +133,7 @@ async def test_skip_today_sets_skip_until(
     users_repo, cards_repo, batches_repo, review_log_repo
 ) -> None:
     words = make_words(2)
-    words_repo = InMemoryWordsRepo(words)
+    words_repo = InMemoryWordsRepo(words, cards_repo=cards_repo)
     srs = SrsService()
     batch = BatchService(users_repo, words_repo, cards_repo, batches_repo, srs)
     learn = LearningService(

@@ -30,6 +30,8 @@ import urllib.request
 from pathlib import Path
 from typing import Iterator, Optional
 
+from data.rank_dictionary import FIELDS, load_counts, rank_rows
+
 FREQ_URL = (
     "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/"
     "content/2018/en/en_full.txt"
@@ -263,11 +265,13 @@ def main() -> None:
     append_phrasal(rows, args.phrasal, rank + 1)
     logging.info("total rows after phrasal verbs: %s", len(rows))
 
+    rows = rank_rows(rows, load_counts(freq_file))
+
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["english", "translation", "frequency_rank", "pos", "example", "is_phrasal"],
+            fieldnames=FIELDS, lineterminator="\n",
         )
         writer.writeheader()
         writer.writerows(rows)

@@ -83,3 +83,43 @@ def test_pos_migration_preserves_progress_and_defaults_to_all(tmp_path) -> None:
         assert connection.execute("SELECT study_pos_filter FROM user_cards").fetchone() == (ALL_POS,)
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+
+
+def test_chat_practice_migration_keeps_entire_existing_database(tmp_path):
+    from datetime import datetime, timezone
+    from sqlalchemy import insert
+    from bot.db.models import Batch, GroupChat, GroupMember, ReviewLog, User, UserCard, Word, WordSense
+    from bot.domain.parts_of_speech import POS_BITS
+    path = tmp_path / 'before_chat_practice.db'
+    cfg = Config(str(ROOT / 'alembic.ini'))
+    cfg.set_main_option('script_location', str(ROOT / 'alembic'))
+    cfg.set_main_option('sqlalchemy.url', f'sqlite:///{path}')
+    command.upgrade(cfg, 'c842e5f2b031')
+    now = datetime(2026, 11, 3, 12, tzinfo=timezone.utc)
+    engine = create_engine(f'sqlite:///{path}')
+    with engine.begin() as connection:
+        connection.execute(insert(User).values(id=42, created_at=now))
+        connection.execute(insert(Word).values(id=1, english='work', translation='работа', pos='noun',
+            frequency_rank=100, example='I work at home.\nThis is hard work.'))
+        connection.execute(insert(WordSense).values(word_id=1, position=0, translation='работа', pos_mask=POS_BITS['noun']))
+        connection.execute(insert(Batch).values(id=1, user_id=42, created_at=now))
+        connection.execute(insert(UserCard).values(user_id=42, word_id=1, batch_id=1, frequency_rank=100,
+            fsrs={'stability': 42, 'due': now.isoformat()}, due=now, my_state='review',
+            consecutive_successes_at_review=3, first_reached_review_at=now, is_hard=True, skip_until=now,
+            created_at=now, updated_at=now))
+        connection.execute(insert(ReviewLog).values(user_id=42, word_id=1, batch_id=1,
+            result='good', user_input='work', reviewed_at=now))
+        connection.execute(insert(GroupChat).values(id=-100, title='English', creator_id=42,
+            timezone='Europe/Moscow', next_report_at=now, created_at=now))
+        connection.execute(insert(GroupMember).values(chat_id=-100, user_id=42, display_name='Learner', joined_at=now))
+    engine.dispose()
+    tables = ['users', 'words', 'word_senses', 'batches', 'user_cards', 'review_log', 'group_chats', 'group_members']
+    with sqlite3.connect(path) as db:
+        before = {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in tables}
+    command.upgrade(cfg, 'head')
+    with sqlite3.connect(path) as db:
+        assert {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in tables} == before
+        assert db.execute('SELECT count(*) FROM chat_practice').fetchone() == (0,)
+        assert db.execute('SELECT count(*) FROM chat_practice_praise').fetchone() == (0,)
+        assert db.execute('PRAGMA integrity_check').fetchone() == ('ok',)
+        assert db.execute('PRAGMA foreign_key_check').fetchall() == []

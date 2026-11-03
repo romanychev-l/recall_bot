@@ -32,6 +32,12 @@ GROUP_HELP = (
     "Освоено — слова на повторении и полностью выученные. Сегодня — разные слова "
     "с верным ответом за текущий день по часовому поясу группы. Общий счёт "
     "включает обучение до вступления и не сбрасывается по неделям.\n\n"
+    "Практика — ещё не освоенные слова, использованные сегодня в сообщениях "
+    "в доступных боту группах. Учитываются все пользователи Recall, даже без "
+    "вступления в таблицу; сама таблица показывает только участников. "
+    "Карточки от этого не считаются выученными.\n\n"
+    "Для чтения обычных сообщений бот должен быть администратором группы "
+    "или Privacy Mode должен быть отключён в BotFather.\n\n"
     "По умолчанию сводка приходит в 21:00. Расписание меняют организатор "
     "и администраторы. Используй команды с именем бота, если в чате несколько ботов."
 )
@@ -63,7 +69,7 @@ def ranking_text(group: dict, standings: list[dict], now: datetime, page: int = 
     pages = max(1, ceil(len(standings) / PAGE_SIZE))
     page = min(max(page, 1), pages)
     lines = ["📚 <b>Слова нашего чата</b>", local.strftime("%d.%m.%Y"),
-             "Освоено всего · правильно сегодня", ""]
+             "Освоено всего · правильно сегодня · практика сегодня", ""]
     previous = None
     place = 0
     for index, row in enumerate(standings):
@@ -73,11 +79,12 @@ def ranking_text(group: dict, standings: list[dict], now: datetime, page: int = 
         previous = score
         if (page - 1) * PAGE_SIZE <= index < page * PAGE_SIZE:
             name = escape(row["display_name"])
-            lines.append(f"{place}. {name} — <b>{row['learned']}</b> · {row['today']}")
+            lines.append(f"{place}. {name} — <b>{row['learned']}</b> · {row['today']} · {row.get('practice', 0)}")
     if not standings:
         lines.append("Пока нет участников. Нажми «Вступить» и учи слова в личном чате с ботом.")
     lines += ["", "Освоено: на повторении и полностью выученные слова.",
               "Сегодня: разные слова с верным ответом; день по " + escape(group["timezone"]) + "."]
+    lines.append('Практика: разные ещё не освоенные слова, использованные в доступных боту группах.')
     status = "Сводки на паузе" if not group["enabled"] else "Ежедневная сводка в " + group["report_time"]
     lines += [status, "Участие добровольное · /leave — выйти из таблицы."]
     if pages > 1:

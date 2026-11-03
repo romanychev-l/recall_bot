@@ -230,3 +230,31 @@ class GroupMember(Base):
     display_name: Mapped[str] = mapped_column(String(64))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     joined_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class ChatPractice(Base):
+    """First use of an unmastered word per user's local calendar day."""
+    __tablename__ = 'chat_practice'
+
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    word_id: Mapped[int] = mapped_column(ForeignKey('words.id', ondelete='CASCADE'), primary_key=True)
+    practice_day: Mapped[str] = mapped_column(String(10), primary_key=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    message_id: Mapped[int] = mapped_column(Integer)
+    study_state: Mapped[str] = mapped_column(String(8))
+    used_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+    __table_args__ = (
+        UniqueConstraint('chat_id', 'message_id', 'word_id', name='uq_chat_practice_message_word'),
+        Index('ix_chat_practice_user_id_used_at', 'user_id', 'used_at'),
+        Index('ix_chat_practice_chat_id_used_at', 'chat_id', 'used_at'),
+    )
+
+
+class ChatPracticePraise(Base):
+    """Durable feedback cooldown; a restart cannot flood a group with praise."""
+    __tablename__ = 'chat_practice_praise'
+
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    last_praised_at: Mapped[datetime] = mapped_column(UtcDateTime)

@@ -58,9 +58,10 @@ async def harness(session_factory, group_dispatcher):
     await state.clear()
     personal_calls = []
 
-    async def send(text=None, *, user=LEARNER, chat_id=CHAT, callback=None, membership=None, **fields):
+    async def send(text=None, *, user=LEARNER, chat_id=CHAT, callback=None, membership=None,
+                   message_id=100, sent_at=NOW, **fields):
         chat = Chat(id=chat_id, type="private" if chat_id > 0 else "supergroup", title="English")
-        message = Message(message_id=100, date=NOW, chat=chat, from_user=user,
+        message = Message(message_id=message_id, date=sent_at, chat=chat, from_user=user,
                           message_thread_id=7 if chat_id < 0 else None, text=text, **fields)
         if membership:
             event = ChatMemberUpdated(chat=chat, from_user=user, date=NOW,
@@ -264,3 +265,61 @@ def test_pagination_and_timezone_schedule():
     for time,zone in [("25:00","UTC"),("9:00","UTC"),("21:00","Not/AZone")]:
         with pytest.raises(ValueError):
             validate_schedule(time,zone)
+
+
+async def seed_chat_practice_words(h):
+    async with h.session_factory() as session:
+        await session.execute(insert(Word), [
+            dict(english='work', translation='работать', pos='verb', frequency_rank=100),
+            dict(english='child', translation='ребёнок', pos='noun', frequency_rank=101),
+            dict(english='discover', translation='открывать', pos='verb', frequency_rank=102),
+        ])
+        await session.commit()
+    await h.container.users_repo.create_if_absent(LEARNER.id)
+
+
+async def test_practice_without_challenge_or_join_praise_reply_statistics_and_dedup(harness):
+    from bot.db.models import ChatPractice
+    h = harness
+    await seed_chat_practice_words(h)
+    assert await h.repo.get(CHAT) is None
+    await h.send('I am working with children.')
+    replies = [m for m in h.sent if isinstance(m, SendMessage)]
+    assert len(replies) == 1
+    assert 'Английский в деле' in replies[0].text and '<b>work</b>' in replies[0].text
+    assert '<b>child</b>' in replies[0].text
+    assert replies[0].reply_parameters.message_id == 100
+    assert replies[0].message_thread_id == 7
+    await h.send('I am working with children.')
+    await h.send('I discover something.', message_id=101)
+    assert len([m for m in h.sent if isinstance(m, SendMessage)]) == 1  # cooldown
+    assert await h.container.practice.stats(LEARNER.id, 'Europe/Moscow', NOW) == {'today': 3, 'total': 3}
+    async with h.session_factory() as session:
+        assert len((await session.scalars(select(ChatPractice))).all()) == 3
+        assert (await session.scalars(select(UserCard))).all() == []
+        assert (await session.scalars(select(ReviewLog))).all() == []
+    # The public table remains opt-in, even though usage credit is automatic.
+    await h.repo.create(group_data())
+    assert await h.repo.standings(CHAT, NOW-timedelta(days=1), NOW) == []
+    await h.groups.join(CHAT, LEARNER, NOW)
+    standings = await h.repo.standings(CHAT, NOW-timedelta(days=1), NOW)
+    assert standings[0]['practice'] == 3 and standings[0]['learned'] == standings[0]['today'] == 0
+
+
+async def test_failed_praise_does_not_lose_credit_or_send_generic_table_error(harness):
+    h = harness
+    await seed_chat_practice_words(h)
+    h.bot.session.make_request = AsyncMock(side_effect=TelegramForbiddenError(
+        method=SendMessage(chat_id=CHAT, text='test'), message='not allowed'))
+    await h.send('I discover something.')
+    assert h.bot.session.make_request.await_count == 1
+    assert (await h.container.practice.stats(LEARNER.id, 'Europe/Moscow', NOW))['total'] == 1
+
+
+async def test_caption_is_detected_and_command_is_not_practice(harness):
+    h = harness
+    await seed_chat_practice_words(h)
+    await h.send(None, caption='I discover something.')
+    assert any(isinstance(m, SendMessage) and '<b>discover</b>' in m.text for m in h.sent)
+    await h.send('/work child', message_id=101)
+    assert (await h.container.practice.stats(LEARNER.id, 'Europe/Moscow', NOW))['total'] == 1

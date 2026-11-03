@@ -27,6 +27,7 @@ async def cmd_stats(
     streak = await container.stats.streak(uid)
     today_correct, today_total = await container.stats.today_counts(uid, user["tz"])
     cefr = await container.stats.cefr_progress(uid)
+    practice = await container.practice.stats(uid, user['tz'])
     cefr_lines = "\n".join(
         f"  {level}: {v['graduated']}/{v['total']}"
         for level, v in cefr.items()
@@ -45,5 +46,7 @@ async def cmd_stats(
         streak=streak,
         next_rank=next_rank,
         cefr=cefr_lines,
+        practice_today=practice['today'],
+        practice_total=practice['total'],
     )
     await message.answer(text)

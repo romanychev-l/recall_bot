@@ -59,6 +59,7 @@ message-stats_summary =
     В изучении: { $learning }
     На повторении: { $review }
     Выучено (graduated): { $graduated }
+    Практика в чатах: { $practice_today } слов сегодня / { $practice_total } разных слов всего
 
     Точность за 7д: { $accuracy }
     Серия дней: { $streak }
@@ -97,6 +98,7 @@ message-help =
 
     Просто пиши английское слово в чат — это и есть ответ.
     После ответа или «Не знаю» появятся примеры употребления слова.
+    В группах доступные боту английские сообщения учитываются как отдельная практика. Её счётчик — в /stats.
     <a href="https://github.com/romanychev-l/recall_bot/blob/main/README.md#examples">Источники и лицензии примеров</a>
 
 button-start_zero = 🌱 Начать с нуля

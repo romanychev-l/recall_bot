@@ -63,6 +63,7 @@ async def main() -> None:
         session_factory, scheduler=scheduler, send_reminder=send_reminder, bot=bot
     )
     container_ref["container"] = container
+    await container.practice.prepare()
 
     dp.include_router(group_router)
     dp.include_router(start_router)

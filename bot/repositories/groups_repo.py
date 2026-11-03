@@ -6,7 +6,7 @@ from sqlalchemy import distinct, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
 from bot.constants import RESULT_GOOD, STATE_GRADUATED, STATE_REVIEW
-from bot.db.models import GroupChat, GroupMember, ReviewLog, UserCard
+from bot.db.models import ChatPractice, GroupChat, GroupMember, ReviewLog, UserCard
 from bot.repositories.base import BaseRepo, one, rows
 
 
@@ -75,12 +75,17 @@ class GroupsRepo(BaseRepo):
         ).group_by(ReviewLog.user_id).subquery()
         total = func.coalesce(learned.c.learned, 0)
         daily = func.coalesce(today.c.today, 0)
+        practice = select(ChatPractice.user_id, func.count(distinct(ChatPractice.word_id)).label('practice')).where(
+            ChatPractice.user_id.in_(members), ChatPractice.used_at >= since, ChatPractice.used_at <= now,
+        ).group_by(ChatPractice.user_id).subquery()
         async with self._sf() as session:
             return rows(await session.execute(select(
                 GroupMember.user_id, GroupMember.display_name,
                 total.label("learned"), daily.label("today"),
+                func.coalesce(practice.c.practice, 0).label('practice'),
             ).outerjoin(learned, learned.c.user_id == GroupMember.user_id)
              .outerjoin(today, today.c.user_id == GroupMember.user_id)
+             .outerjoin(practice, practice.c.user_id == GroupMember.user_id)
              .where(GroupMember.chat_id == chat_id, GroupMember.active.is_(True))
              .order_by(total.desc(), daily.desc(), GroupMember.display_name, GroupMember.user_id)))
 

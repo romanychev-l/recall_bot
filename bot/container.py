@@ -17,6 +17,8 @@ from bot.services.learning_service import LearningService
 from bot.services.onboarding_service import OnboardingService
 from bot.services.reminder_service import ReminderService
 from bot.services.stats_service import StatsService
+from bot.repositories.practice_repo import PracticeRepo
+from bot.services.practice_service import PracticeService
 
 
 @dataclass
@@ -33,6 +35,7 @@ class Container:
     stats: StatsService
     reminder: ReminderService
     groups: GroupService
+    practice: PracticeService
 
 
 def build_container(
@@ -68,4 +71,5 @@ def build_container(
         stats=stats,
         reminder=reminder,
         groups=GroupService(bot, GroupsRepo(session_factory), scheduler),
+        practice=PracticeService(PracticeRepo(session_factory), users_repo),
     )

@@ -8,7 +8,7 @@ from aiogram import BaseMiddleware, F, Router
 from aiogram.enums import ChatMemberStatus, ChatType
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command, CommandObject
-from aiogram.types import CallbackQuery, ChatMemberUpdated, Message
+from aiogram.types import CallbackQuery, ChatMemberUpdated, Message, ReplyParameters
 from sqlalchemy.exc import SQLAlchemyError
 
 from bot.constants import DEFAULT_TZ
@@ -239,10 +239,13 @@ async def bot_membership(event: ChatMemberUpdated, container) -> None:
     if present and not is_present(event.old_chat_member):
         username = (await container.groups.bot_url()).rsplit("/", 1)[1]
         await event.answer("Привет! Я Recall. Учите английские слова в личном чате, "
-                           "а здесь я буду присылать вечернюю сводку по участникам.\n\n"
+                           "а здесь используйте их в разговоре: я буду отмечать практику ещё не освоенных слов. "
+                           "Для этого достаточно быть пользователем Recall; вступать в таблицу не обязательно.\n\n"
                            f"/challenge@{username} — создать таблицу и вступить первым\n"
                            f"/help_group@{username} — правила и команды\n\n"
-                           "Остальные участники смогут нажать «Вступить». Сводки по умолчанию — в 21:00.",
+                           "Остальные участники смогут нажать «Вступить». Сводки по умолчанию — в 21:00.\n\n"
+                           "Чтобы я видел обычные сообщения, нужны права администратора группы "
+                           "или отключённый Privacy Mode в BotFather.",
                            reply_markup=await container.groups.keyboard(include_join=False))
 
 
@@ -254,9 +257,22 @@ async def participant_membership(event: ChatMemberUpdated, container) -> None:
 
 
 @router.message()
-async def ignore_group_message(message: Message) -> None:
-    # Privacy-mode replies and service events must never reach private FSM routes.
-    pass
+async def observe_group_message(message: Message, container) -> None:
+    # This terminal handler also keeps group text away from personal quiz states.
+    try:
+        words = await container.practice.observe(message)
+        if words:
+            shown = ', '.join(f'<b>{escape(word)}</b>' for word in words[:5])
+            extra = f' и ещё {len(words) - 5}' if len(words) > 5 else ''
+            await message.bot.send_message(
+                chat_id=message.chat.id, message_thread_id=message.message_thread_id,
+                text=f'🙌 Английский в деле: {shown}{extra}! Практика новых слов учтена.',
+                reply_parameters=ReplyParameters(message_id=message.message_id, allow_sending_without_reply=True),
+            )
+    except (SQLAlchemyError, TelegramAPIError):
+        # A failed acknowledgement must not turn normal conversation into an
+        # error/retry loop; committed usage credit remains available in /stats.
+        logger.exception('chat_practice_failed chat_id=%s', message.chat.id)
 
 
 @router.callback_query()

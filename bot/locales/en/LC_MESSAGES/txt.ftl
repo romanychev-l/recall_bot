@@ -59,6 +59,7 @@ message-stats_summary =
     Learning: { $learning }
     Review: { $review }
     Graduated: { $graduated }
+    Chat practice: { $practice_today } words today / { $practice_total } distinct words total
 
     Accuracy (7d): { $accuracy }
     Streak: { $streak }
@@ -97,6 +98,7 @@ message-help =
 
     Just type the English word in chat — that's your answer.
     Usage examples appear after your answer or "Don't know".
+    English messages the bot can read in groups count as separate chat practice. See /stats for your count.
     <a href="https://github.com/romanychev-l/recall_bot/blob/main/README.md#examples">Example sources and licenses</a>
 
 button-start_zero = 🌱 Start from scratch

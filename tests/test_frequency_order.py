@@ -171,3 +171,33 @@ async def test_startup_preserves_supplementary_words_and_initial_level(session_f
     assert [row["english"] for row in available] == ["act", "account", "custom phrase"]
     assert (await users.get(2))["next_batch_start_rank"] == 3
     assert await words.count() == 5
+
+
+async def test_startup_backfills_examples_by_english_without_touching_progress(session_factory, tmp_path):
+    from bot.db.models import UserCard, WordSense
+    path, _, words, _, _, old = await setup_legacy(session_factory, tmp_path)
+    async with session_factory() as session:
+        custom_id = old['account']['id']
+        await session.execute(Word.__table__.update().where(Word.id == custom_id).values(example='My own example.'))
+        snapshot = {model.__tablename__: (await session.execute(select(model.__table__))).mappings().all()
+                    for model in (UserCard, ReviewLog, WordSense)}
+        await session.commit()
+    # Keep the existing ranks fixed to isolate example backfilling.
+    entries = [dict(row, example=f"We use {row['english']} in this sentence.") for row in old.values()]
+    fields = ['english', 'translation', 'frequency_rank', 'pos', 'example']
+    with path.open('w', newline='', encoding='utf-8') as target:
+        writer = csv.DictWriter(target, fieldnames=fields, extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(entries)
+    await seed_if_empty(session_factory, path)
+    for english, previous in old.items():
+        current = await words.by_id(previous['id'])
+        assert current['english'] == english
+        assert current['example'] == ('My own example.' if english == 'account' else f'We use {english} in this sentence.')
+        assert {k: v for k, v in current.items() if k != 'example'} == {
+            k: v for k, v in previous.items() if k != 'example'}
+    async with session_factory() as session:
+        for model in (UserCard, ReviewLog, WordSense):
+            assert (await session.execute(select(model.__table__))).mappings().all() == snapshot[model.__tablename__]
+    await seed_if_empty(session_factory, path)
+    assert (await words.by_id(custom_id))['example'] == 'My own example.'

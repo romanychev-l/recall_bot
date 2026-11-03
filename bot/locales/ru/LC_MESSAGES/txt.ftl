@@ -23,6 +23,9 @@ message-prompt_word =
 message-answer_correct = ✅ Верно: <b>{ $word }</b>
 message-answer_wrong = ❌ Неверно. Было: <b>{ $expected }</b>. Ты написал: <i>{ $got }</i>
 message-answer_revealed = 👀 Было: <b>{ $word }</b>. Помечено как сложное.
+message-usage_examples =
+    📖 Примеры употребления:
+    { $examples }
 message-new_batch_issued = 🎉 Текущий батч пройден — выдан новый!
 message-skipped_today = Пропущено до завтра
 message-marked_hard = Помечено как сложное
@@ -93,6 +96,8 @@ message-help =
     ⏭ <b>Пропустить</b> — отложить до завтра, без оценки
 
     Просто пиши английское слово в чат — это и есть ответ.
+    После ответа или «Не знаю» появятся примеры употребления слова.
+    <a href="https://github.com/romanychev-l/recall_bot/blob/main/README.md#examples">Источники и лицензии примеров</a>
 
 button-start_zero = 🌱 Начать с нуля
 button-start_skip = ⏩ Уже знаю часть слов

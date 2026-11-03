@@ -26,6 +26,7 @@ class AnswerOutcome:
     new_state: str
     transitioned_to_review: bool
     next_batch_issued: bool
+    example: str = ""
 
 
 class LearningService:
@@ -119,6 +120,7 @@ class LearningService:
             new_state=update.my_state,
             transitioned_to_review=transitioned,
             next_batch_issued=next_batch_issued,
+            example=word.get("example") or "",
         )
 
     async def skip_today(

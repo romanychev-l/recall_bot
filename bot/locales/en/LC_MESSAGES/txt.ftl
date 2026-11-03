@@ -23,6 +23,9 @@ message-prompt_word =
 message-answer_correct = ✅ Correct: <b>{ $word }</b>
 message-answer_wrong = ❌ Wrong. Expected: <b>{ $expected }</b>. You wrote: <i>{ $got }</i>
 message-answer_revealed = 👀 Was: <b>{ $word }</b>. Marked as hard.
+message-usage_examples =
+    📖 Usage examples:
+    { $examples }
 message-new_batch_issued = 🎉 Current batch cleared — new batch issued!
 message-skipped_today = Skipped until tomorrow
 message-marked_hard = Marked as hard
@@ -93,6 +96,8 @@ message-help =
     ⏭ <b>Skip</b> — postpone until tomorrow, no scoring
 
     Just type the English word in chat — that's your answer.
+    Usage examples appear after your answer or "Don't know".
+    <a href="https://github.com/romanychev-l/recall_bot/blob/main/README.md#examples">Example sources and licenses</a>
 
 button-start_zero = 🌱 Start from scratch
 button-start_skip = ⏩ I already know some

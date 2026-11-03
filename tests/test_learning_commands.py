@@ -371,3 +371,46 @@ async def test_finish_daily_session_then_get_frequency_words(harness, entrypoint
     async with h.session_factory() as session:
         after = (await session.execute(select(UserCard.__table__).where(UserCard.id.in_([c['id'] for c in before])))).mappings().all()
     assert after == before
+
+
+@pytest.mark.parametrize('locale', ['ru', 'en'])
+@pytest.mark.parametrize('answer', ['correct', 'wrong', 'dontknow'])
+async def test_examples_revealed_only_after_answer_with_safe_html(harness, locale, answer):
+    h = harness
+    examples = 'We share bread & butter.\nShe wrote <hello> on the board.'
+    async with h.session_factory() as session:
+        await session.execute(update(Word).values(example=examples))
+        await session.commit()
+    await h.send('/more 1', locale=locale)
+    prompt = latest_menu(h).text
+    assert 'bread' not in prompt and 'hello' not in prompt
+    word_id = int((await h.state.get_data())['queue'][0])
+    word = await h.container.words_repo.by_id(word_id)
+    before = len(h.sent)
+    if answer == 'dontknow':
+        await h.send(callback=f'card:dontknow:{word_id}', locale=locale)
+    else:
+        await h.send(word['english'] if answer == 'correct' else '<wrong & answer>', locale=locale)
+    messages = [m.text for m in h.sent[before:] if isinstance(m, SendMessage)]
+    feedback = messages[0]
+    assert ('Примеры употребления:' if locale == 'ru' else 'Usage examples:') in feedback
+    assert '• <i>We share bread &amp; butter.</i>' in feedback
+    assert '• <i>She wrote &lt;hello&gt; on the board.</i>' in feedback
+    if answer == 'wrong':
+        assert '&lt;wrong &amp; answer&gt;' in feedback
+    assert await h.state.get_state() is None
+    async with h.session_factory() as session:
+        logs = (await session.scalars(select(ReviewLog))).all()
+        assert len(logs) == 1
+        assert logs[0].result == ('good' if answer == 'correct' else 'again')
+
+
+async def test_custom_word_without_examples_still_accepts_answer(harness):
+    h = harness
+    await h.send('/more 1')
+    word_id = int((await h.state.get_data())['queue'][0])
+    word = await h.container.words_repo.by_id(word_id)
+    before = len(h.sent)
+    await h.send(word['english'])
+    feedback = [m.text for m in h.sent[before:] if isinstance(m, SendMessage)][0]
+    assert '✅' in feedback and '📖' not in feedback

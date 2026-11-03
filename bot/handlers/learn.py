@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from html import escape
 from typing import Optional
 
 from aiogram import F, Router
@@ -17,6 +18,15 @@ from bot.utils.keyboards import answer_actions_kb, learning_actions_kb
 
 logger = logging.getLogger(__name__)
 router = Router(name="learn")
+
+
+def _with_examples(text: str, example: str, i18n: TranslatorRunner) -> str:
+    """Keep examples in the answer message, safely inside Telegram HTML."""
+    examples = [line.strip() for line in example.splitlines() if line.strip()][:2]
+    if not examples:
+        return text
+    rendered = "\n".join(f"• <i>{escape(line)}</i>" for line in examples)
+    return text + "\n\n" + i18n.message.usage_examples(examples=rendered)
 
 
 def _queue_ids(cards: list[dict]) -> list[str]:
@@ -223,14 +233,13 @@ async def on_answer(
 
     outcome = await container.learning.evaluate_answer(user, card, message.text)
     if outcome.correct:
-        await message.answer(i18n.message.answer_correct(word=outcome.correct_english))
+        feedback = i18n.message.answer_correct(word=escape(outcome.correct_english))
     else:
-        await message.answer(
-            i18n.message.answer_wrong(
-                expected=outcome.correct_english,
-                got=message.text,
-            )
+        feedback = i18n.message.answer_wrong(
+            expected=escape(outcome.correct_english),
+            got=escape(message.text),
         )
+    await message.answer(_with_examples(feedback, outcome.example, i18n))
     if outcome.next_batch_issued:
         await message.answer(i18n.message.new_batch_issued())
 
@@ -289,7 +298,10 @@ async def on_dont_know(
     outcome = await container.learning.evaluate_answer(user, card, "", )
     await container.learning.mark_hard(callback.from_user.id, word_id, True)
     await callback.message.answer(
-        i18n.message.answer_revealed(word=outcome.correct_english)
+        _with_examples(
+            i18n.message.answer_revealed(word=escape(outcome.correct_english)),
+            outcome.example, i18n,
+        )
     )
 
     data = await state.get_data()

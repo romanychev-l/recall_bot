@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any, Iterator
 
-from sqlalchemy import delete, func, insert, select
+from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from bot.db.models import Word, WordSense
@@ -110,18 +110,21 @@ async def seed_word_senses(session_factory: async_sessionmaker, senses_csv: Path
 async def seed_if_empty(
     session_factory: async_sessionmaker, csv_path: Path
 ) -> int:
-    """Seed a fresh database or sync ranks of known words on an existing one.
+    """Seed a fresh database, or sync ranks and backfill missing usage examples.
 
     Existing translations and word IDs are preserved. The rank update and card
-    rank mirrors are committed together before the bot accepts any updates.
+    rank mirrors and missing examples are committed together before polling.
     """
     existing = await count_words(session_factory)
     if existing:
         if csv_path.exists():
             async with session_factory() as s:
-                _, updated = await apply_dictionary(s, list(read_rows(csv_path)), update_content=False)
+                entries = list(read_rows(csv_path))
+                _, updated = await apply_dictionary(s, entries, update_content=False)
+                examples_updated = await fill_missing_examples(s, entries)
                 await s.commit()
             logger.info("dictionary_ranks_synced words=%s updated=%s", existing, updated)
+            logger.info("dictionary_examples_synced updated=%s", examples_updated)
         else:
             logger.warning("dictionary_csv_missing path=%s", csv_path)
         return 0
@@ -131,3 +134,19 @@ async def seed_if_empty(
     inserted, _ = await seed_from_csv(session_factory, csv_path)
     logger.info("dictionary_seeded words=%s path=%s", inserted, csv_path)
     return inserted
+
+
+async def fill_missing_examples(session, entries: list[dict]) -> int:
+    """Backfill by English identity, preserving custom examples and all progress.
+
+    The caller commits this together with the startup dictionary synchronization.
+    """
+    examples = {row["english"]: row["example"] for row in entries if row.get("example")}
+    missing = (await session.execute(select(Word.id, Word.english).where(
+        func.trim(func.coalesce(Word.example, "")) == ""
+    ))).all()
+    updates = [{"id": word_id, "example": examples[english]}
+               for word_id, english in missing if english in examples]
+    if updates:
+        await session.execute(update(Word), updates)
+    return len(updates)

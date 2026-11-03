@@ -20,6 +20,11 @@ message-prompt_word =
     Переведи на английский: <b>{ $translation }</b>
 
     <i>{ $pos }</i> • осталось: { $remaining }
+message-prompt_reverse =
+    Переведи на русский: <b>{ $word }</b>
+    Достаточно одного перевода из словаря.
+
+    <i>{ $pos }</i> • осталось: { $remaining }
 message-answer_correct = ✅ Верно: <b>{ $word }</b>
 message-answer_wrong = ❌ Неверно. Было: <b>{ $expected }</b>. Ты написал: <i>{ $got }</i>
 message-answer_revealed = 👀 Было: <b>{ $word }</b>. Помечено как сложное.
@@ -31,7 +36,7 @@ message-skipped_today = Пропущено до завтра
 message-marked_hard = Помечено как сложное
 message-skip_only_inline = /skip работает через кнопку в карточке.
 message-hard_only_inline = /hard работает через кнопку в карточке.
-message-unknown_command = Не понимаю. Команды: /start /learn /more /stats /settings /help
+message-unknown_command = Не понимаю. Команды: /start /learn /reverse /more /stats /settings /help
 message-cram_started = Добавлено новых слов: { $n }. Начинаем занятие!
 message-cram_bad_n = Используй /more или /more N, где N — целое число от 1 до 500. Также работает /cram N.
 message-no_more_words = В словаре больше нет слов 🎉
@@ -83,6 +88,7 @@ message-help =
     📖 Команды:
 
     /learn — продолжить занятие: повторения и все начатые порции слов
+    /reverse — английское слово → один из русских переводов из словаря
     /more <code>N</code> — добавить новые слова и сразу начать занятие;
        без числа — порция из настроек, с числом — от 1 до 500 слов
     /cram <code>N</code> — форс-сессия из N новых слов (default 50, max 500),
@@ -96,7 +102,9 @@ message-help =
     🤔 <b>Не знаю</b> — показать ответ, засчитать как ошибку, дальше
     ⏭ <b>Пропустить</b> — отложить до завтра, без оценки
 
-    Просто пиши английское слово в чат — это и есть ответ.
+    В /learn пиши английское слово, в /reverse — один русский перевод.
+    Прогресс и расписание повторений общие для обоих направлений.
+    «Продолжить», «Ещё слова», /more и /cram сохраняют направление; /learn возвращает перевод на английский.
     После ответа или «Не знаю» появятся примеры употребления слова.
     В группах доступные боту английские сообщения учитываются как отдельная практика. Её счётчик — в /stats.
     <a href="https://github.com/romanychev-l/recall_bot/blob/main/README.md#examples">Источники и лицензии примеров</a>
@@ -130,6 +138,7 @@ pos-other = Прочее / без разметки
 button-more_words = ➕ Ещё слова
 button-continue_learning = ▶️ Продолжить
 command-learn = Продолжить обучение
+command-reverse = Английское слово → русский перевод
 command-more = Добавить новые слова
 command-stats = Мой прогресс
 command-settings = Настройки обучения

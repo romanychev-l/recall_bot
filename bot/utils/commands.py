@@ -5,7 +5,7 @@ from aiogram import Bot
 from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeAllGroupChats, MenuButtonCommands
 from fluentogram import TranslatorHub
 
-COMMANDS = ("learn", "more", "stats", "settings", "help", "start", "cram", "skip", "hard")
+COMMANDS = ("learn", "reverse", "more", "stats", "settings", "help", "start", "cram", "skip", "hard")
 logger = logging.getLogger(__name__)
 
 

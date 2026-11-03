@@ -414,3 +414,138 @@ async def test_custom_word_without_examples_still_accepts_answer(harness):
     await h.send(word['english'])
     feedback = [m.text for m in h.sent[before:] if isinstance(m, SendMessage)][0]
     assert '✅' in feedback and '📖' not in feedback
+
+
+@pytest.mark.parametrize("locale", ["ru", "en"])
+@pytest.mark.parametrize("answer", ["свет", " ЛЕГКИЙ! ", "light", "<ошибка & ответ>", "dontknow"])
+async def test_reverse_prompt_answers_examples_and_shared_srs(harness, locale, answer):
+    h = harness
+    await h.container.users_repo.update(USER.id, batch_size=1)
+    async with h.session_factory() as session:
+        await session.execute(update(Word).values(
+            english="light", translation="свет; лёгкий", example="The light is on."
+        ).where(Word.frequency_rank == 1))
+        await session.commit()
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    await h.send("/reverse", locale=locale)
+    prompt = latest_menu(h)
+    assert ("Переведи на русский" if locale == "ru" else "Translate to Russian") in prompt.text
+    assert "light" in prompt.text
+    assert all(t not in prompt.text for t in ("свет", "лёгкий", "The light is on."))
+    data = await h.state.get_data()
+    assert data["reverse"] is True and data["user_id"] == USER.id
+    word_id = int(data["queue"][0])
+    assert prompt.reply_markup.inline_keyboard[0][0].callback_data == f"reversecard:dontknow:{word_id}"
+    before = len(h.sent)
+    if answer == "dontknow":
+        await h.send(callback=f"reversecard:dontknow:{word_id}", locale=locale)
+    else:
+        await h.send(answer, locale=locale)
+    feedback = [m.text for m in h.sent[before:] if isinstance(m, SendMessage)][0]
+    correct = answer in {"свет", " ЛЕГКИЙ! "}
+    assert ("✅" if correct else "👀" if answer == "dontknow" else "❌") in feedback
+    assert "свет; лёгкий" in feedback and "The light is on." in feedback
+    if answer.startswith("<"):
+        assert "&lt;ошибка &amp; ответ&gt;" in feedback
+    async with h.session_factory() as session:
+        logs = (await session.scalars(select(ReviewLog))).all()
+        assert len(logs) == 1 and logs[0].result == ("good" if correct else "again")
+        assert logs[0].user_input == ("" if answer == "dontknow" else answer)
+    card = await h.container.cards_repo.get(USER.id, word_id)
+    assert card["my_state"] == ("review" if correct else "learning")
+    assert card["is_hard"] is (answer == "dontknow")
+    assert await h.state.get_state() is None
+    assert (await h.state.get_data())["reverse"] is True
+    assert {b.callback_data for row in latest_menu(h).reply_markup.inline_keyboard for b in row} == {
+        "reverse:continue", "reverse:more",
+    }
+
+
+@pytest.mark.parametrize("entrypoint", ["reverse:more", "reverse:continue", "/more 2", "/cram 2"])
+async def test_reverse_direction_survives_completion_and_new_words(harness, entrypoint):
+    h = harness
+    await h.container.users_repo.update(USER.id, batch_size=1)
+    await h.send("/reverse")  # No cards yet; adding words keeps the chosen direction.
+    assert latest_menu(h).reply_markup.inline_keyboard[0][0].callback_data == "reverse:more"
+    await h.send("/more 1")
+    word_id = int((await h.state.get_data())["queue"][0])
+    word = await h.container.words_repo.by_id(word_id)
+    await h.send(word["translation"])
+    assert await h.state.get_state() is None
+    if entrypoint.startswith("/"):
+        await h.send(entrypoint)
+    else:
+        await h.send(callback=entrypoint)
+    assert await h.state.get_state() == LearnSG.waiting_answer.state
+    assert (await h.state.get_data())["reverse"] is True
+    assert "Переведи на русский" in latest_menu(h).text
+    # Switching direction leaves the existing cards and review history intact.
+    card = await h.container.cards_repo.get(USER.id, word_id)
+    await h.send("/learn")
+    assert (await h.state.get_data())["reverse"] is False
+    assert "Переведи на английский" in latest_menu(h).text
+    assert await h.container.cards_repo.get(USER.id, word_id) == card
+
+
+@pytest.mark.parametrize("answer,expected", [("легкий", "good"), ("свет", "again")])
+async def test_reverse_uses_only_card_selected_parts_of_speech(harness, answer, expected):
+    h = harness
+    async with h.session_factory() as session:
+        word = (await session.scalars(select(Word).where(Word.frequency_rank == 1))).one()
+        word.translation = "свет; лёгкий"
+        await session.execute(insert(WordSense), [
+            dict(word_id=word.id, position=0, translation="свет", pos_mask=POS_BITS["noun"]),
+            dict(word_id=word.id, position=1, translation="лёгкий", pos_mask=POS_BITS["adj"]),
+        ])
+        await session.commit()
+    await h.container.users_repo.update(USER.id, batch_size=1, pos_filter=POS_BITS["adj"])
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    # Broadening the filter must not turn an adjective card into a noun card.
+    await h.container.users_repo.update(USER.id, pos_filter=ALL_POS)
+    await h.send("/reverse")
+    before = len(h.sent)
+    await h.send(answer)
+    feedback = [m.text for m in h.sent[before:] if isinstance(m, SendMessage)][0]
+    feedback = feedback.replace("\u2068", "").replace("\u2069", "")
+    assert "<b>лёгкий</b>" in feedback and "<b>свет" not in feedback
+    async with h.session_factory() as session:
+        assert (await session.scalars(select(ReviewLog.result))).all() == [expected]
+
+
+async def test_reverse_skip_postpones_without_review(harness):
+    h = harness
+    await h.send(callback="reverse:more")
+    word_id = int((await h.state.get_data())["queue"][0])
+    card = await h.container.cards_repo.get(USER.id, word_id)
+    await h.send(callback=f"reversecard:skip:{word_id}")
+    after = await h.container.cards_repo.get(USER.id, word_id)
+    assert after["skip_until"] > NOW
+    assert after["fsrs"] == card["fsrs"] and after["my_state"] == card["my_state"]
+    async with h.session_factory() as session:
+        assert (await session.scalars(select(ReviewLog))).all() == []
+    user = await h.container.users_repo.get(USER.id)
+    assert word_id not in {c["word_id"] for c in await h.container.learning.build_session(user)}
+
+
+@pytest.mark.parametrize("action", ["skip", "dontknow"])
+@pytest.mark.parametrize("stale", ["direction", "word"])
+async def test_old_card_buttons_cannot_change_current_reverse_session(harness, action, stale):
+    h = harness
+    await h.send(callback="reverse:more")
+    before = await h.state.get_data()
+    word_id = before["queue"][0 if stale == "direction" else 1]
+    card = await h.container.cards_repo.get(USER.id, int(word_id))
+    prefix = "card" if stale == "direction" else "reversecard"
+    await h.send(callback=f"{prefix}:{action}:{word_id}")
+    assert await h.state.get_data() == before
+    assert await h.container.cards_repo.get(USER.id, int(word_id)) == card
+    async with h.session_factory() as session:
+        assert (await session.scalars(select(ReviewLog))).all() == []
+
+
+async def test_reverse_requires_onboarding(harness):
+    h = harness
+    h.container.users_repo.get = AsyncMock(return_value=None)
+    await h.send("/reverse")
+    assert "/start" in latest_menu(h).text
+    assert await h.state.get_state() is None

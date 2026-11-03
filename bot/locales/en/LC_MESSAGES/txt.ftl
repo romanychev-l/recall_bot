@@ -20,6 +20,11 @@ message-prompt_word =
     Translate to English: <b>{ $translation }</b>
 
     <i>{ $pos }</i> • remaining: { $remaining }
+message-prompt_reverse =
+    Translate to Russian: <b>{ $word }</b>
+    One dictionary translation is enough.
+
+    <i>{ $pos }</i> • remaining: { $remaining }
 message-answer_correct = ✅ Correct: <b>{ $word }</b>
 message-answer_wrong = ❌ Wrong. Expected: <b>{ $expected }</b>. You wrote: <i>{ $got }</i>
 message-answer_revealed = 👀 Was: <b>{ $word }</b>. Marked as hard.
@@ -31,7 +36,7 @@ message-skipped_today = Skipped until tomorrow
 message-marked_hard = Marked as hard
 message-skip_only_inline = /skip works via the card button.
 message-hard_only_inline = /hard works via the card button.
-message-unknown_command = I don't understand. Commands: /start /learn /more /stats /settings /help
+message-unknown_command = I don't understand. Commands: /start /learn /reverse /more /stats /settings /help
 message-cram_started = Added { $n } new words. Let’s start!
 message-cram_bad_n = Use /more or /more N, where N is an integer from 1 to 500. /cram N also works.
 message-no_more_words = No more words in the dictionary 🎉
@@ -83,6 +88,7 @@ message-help =
     📖 Commands:
 
     /learn — continue learning: reviews and all unfinished batches
+    /reverse — English word → one of its Russian dictionary translations
     /more <code>N</code> — add new words and start learning immediately;
        without a number — your batch size, with a number — 1 to 500 words
     /cram <code>N</code> — force-session of N new words (default 50, max 500),
@@ -96,7 +102,9 @@ message-help =
     🤔 <b>Don't know</b> — reveal answer, count as wrong, advance
     ⏭ <b>Skip</b> — postpone until tomorrow, no scoring
 
-    Just type the English word in chat — that's your answer.
+    In /learn, type the English word; in /reverse, type one Russian translation.
+    Both directions share progress and the review schedule.
+    “Continue”, “More words”, /more and /cram keep the direction; /learn returns to translating into English.
     Usage examples appear after your answer or "Don't know".
     English messages the bot can read in groups count as separate chat practice. See /stats for your count.
     <a href="https://github.com/romanychev-l/recall_bot/blob/main/README.md#examples">Example sources and licenses</a>
@@ -130,6 +138,7 @@ pos-other = Other / unclassified
 button-more_words = ➕ More words
 button-continue_learning = ▶️ Continue
 command-learn = Continue learning
+command-reverse = English word → Russian translation
 command-more = Add new words
 command-stats = My progress
 command-settings = Learning settings

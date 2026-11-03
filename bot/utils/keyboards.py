@@ -11,27 +11,31 @@ def onboarding_kb(i18n) -> InlineKeyboardMarkup:
     ])
 
 
-def answer_actions_kb(i18n, word_id: str) -> InlineKeyboardMarkup:
+def answer_actions_kb(i18n, word_id: str, *, reverse: bool = False) -> InlineKeyboardMarkup:
+    prefix = "reversecard" if reverse else "card"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text=i18n.button.dont_know(), callback_data=f"card:dontknow:{word_id}"
+                text=i18n.button.dont_know(), callback_data=f"{prefix}:dontknow:{word_id}"
             ),
             InlineKeyboardButton(
-                text=i18n.button.skip(), callback_data=f"card:skip:{word_id}"
+                text=i18n.button.skip(), callback_data=f"{prefix}:skip:{word_id}"
             ),
         ],
     ])
 
 
-def learning_actions_kb(i18n, *, can_continue: bool = False) -> InlineKeyboardMarkup:
+def learning_actions_kb(
+    i18n, *, can_continue: bool = False, reverse: bool = False,
+) -> InlineKeyboardMarkup:
+    prefix = "reverse" if reverse else "learn"
     buttons = []
     if can_continue:
         buttons.append([
-            InlineKeyboardButton(text=i18n.button.continue_learning(), callback_data="learn:continue")
+            InlineKeyboardButton(text=i18n.button.continue_learning(), callback_data=f"{prefix}:continue")
         ])
     buttons.append([
-        InlineKeyboardButton(text=i18n.button.more_words(), callback_data="learn:more")
+        InlineKeyboardButton(text=i18n.button.more_words(), callback_data=f"{prefix}:more")
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

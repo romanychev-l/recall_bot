@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from bot.constants import RESULT_AGAIN, RESULT_GOOD, STATE_LEARNING, STATE_REVIEW
-from bot.domain.matching import is_correct
-from bot.domain.parts_of_speech import ALL_POS
+from bot.domain.matching import is_correct, is_translation_correct
+from bot.domain.parts_of_speech import ALL_POS, study_word
 from bot.domain.srs import SrsService
 from bot.repositories.cards_repo import CardsRepo
 from bot.repositories.review_log_repo import ReviewLogRepo
@@ -27,6 +27,7 @@ class AnswerOutcome:
     transitioned_to_review: bool
     next_batch_issued: bool
     example: str = ""
+    correct_translation: str = ""
 
 
 class LearningService:
@@ -70,13 +71,22 @@ class LearningService:
         card: dict,
         user_input: str,
         now: Optional[datetime] = None,
+        *,
+        reverse: bool = False,
     ) -> AnswerOutcome:
         now = now or datetime.now(timezone.utc)
         word = await self.words_repo.by_id(card["word_id"])
         if word is None:
             raise ValueError(f"word {card['word_id']} not found")
 
-        correct = is_correct(user_input, word["english"])
+        if reverse:
+            mask = user.get("pos_filter", ALL_POS) & card.get("study_pos_filter", ALL_POS)
+            word = study_word(word, await self.words_repo.senses(card["word_id"]), mask)
+            if word is None:
+                raise ValueError(f"word {card['word_id']} has no selected meanings")
+            correct = is_translation_correct(user_input, word["translation"])
+        else:
+            correct = is_correct(user_input, word["english"])
         prev_state = card["my_state"]
         update = self.srs.review(
             fsrs_state=card["fsrs"],
@@ -111,8 +121,8 @@ class LearningService:
             )
             next_batch_issued = issued is not None
         logger.info(
-            "answer user_id=%s word_id=%s correct=%s new_state=%s",
-            user["id"], card["word_id"], correct, update.my_state,
+            "answer user_id=%s word_id=%s correct=%s new_state=%s reverse=%s",
+            user["id"], card["word_id"], correct, update.my_state, reverse,
         )
         return AnswerOutcome(
             correct=correct,
@@ -121,6 +131,7 @@ class LearningService:
             transitioned_to_review=transitioned,
             next_batch_issued=next_batch_issued,
             example=word.get("example") or "",
+            correct_translation=word["translation"],
         )
 
     async def skip_today(

@@ -114,10 +114,10 @@ class GroupService:
         return f"https://t.me/{self._username}"
 
     async def keyboard(self, page: int = 1, pages: int = 1, *, include_join: bool = True) -> InlineKeyboardMarkup:
-        rows = [[InlineKeyboardButton(text="Вступить", callback_data="group:join"),
+        rows = [[InlineKeyboardButton(text="Выйти", callback_data="group:leave"),
                  InlineKeyboardButton(text="Открыть бота", url=await self.bot_url())],
                 [InlineKeyboardButton(text="Обновить", callback_data=f"group:refresh:{page}"),
-                 InlineKeyboardButton(text="Выйти", callback_data="group:leave")]]
+                 InlineKeyboardButton(text="Вступить", callback_data="group:join")]]
         navigation = []
         if page > 1:
             navigation.append(InlineKeyboardButton(text="← Назад", callback_data=f"group:refresh:{page-1}"))

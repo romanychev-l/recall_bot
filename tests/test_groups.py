@@ -96,15 +96,24 @@ async def test_create_join_refresh_leave_and_private_link(harness):
     assert post.message_thread_id == 7
     assert post.reply_markup.inline_keyboard[0][1].url == "https://t.me/recall_test_bot"
     assert "startapp" not in post.reply_markup.inline_keyboard[0][1].url
+    leave_button = next(button for row in post.reply_markup.inline_keyboard for button in row
+                        if button.text == "Выйти")
     await h.send(callback="group:join", user=OTHER)
     await h.send(callback="group:join", user=OTHER)
     assert len(await h.repo.standings(CHAT, NOW-timedelta(days=1), NOW)) == 2
     # Joining does not reset or create personal learning progress.
     assert await h.container.users_repo.get(OTHER.id) is None
-    await h.send("/leave", user=OTHER)
+    await h.send(callback=leave_button.callback_data, user=OTHER, message_id=42)
     assert [r["user_id"] for r in await h.repo.standings(CHAT, NOW-timedelta(days=1), NOW)] == [LEARNER.id]
+    assert h.sent[-1].message_id == 42
+    assert "Анна" not in h.sent[-1].text
+    before = len([m for m in h.sent if isinstance(m, EditMessageText)])
+    await h.send(callback=leave_button.callback_data, user=OTHER, message_id=42)
+    assert len([m for m in h.sent if isinstance(m, EditMessageText)]) == before
     await h.send("/join", user=OTHER)
     assert len(await h.repo.standings(CHAT, NOW-timedelta(days=1), NOW)) == 2
+    await h.send("/leave", user=OTHER)
+    assert [r["user_id"] for r in await h.repo.standings(CHAT, NOW-timedelta(days=1), NOW)] == [LEARNER.id]
     await h.send("/leaders")
     assert any(isinstance(m, EditMessageText) for m in h.sent)
 
@@ -130,7 +139,10 @@ async def test_memberships_independent_and_names_escaped(harness):
     person = User(id=999, is_bot=False, first_name="<b>A & B</b>")
     await h.groups.join(CHAT, person, NOW)
     await h.groups.join(CHAT-1, person, NOW)
-    assert await h.repo.leave(CHAT, person.id)
+    await h.container.users_repo.create_if_absent(person.id)
+    user_before = await h.container.users_repo.get(person.id)
+    await h.send(callback="group:leave", user=person)
+    assert await h.container.users_repo.get(person.id) == user_before
     assert await h.repo.standings(CHAT, NOW, NOW) == []
     rows = await h.repo.standings(CHAT-1, NOW, NOW)
     text, _, _ = ranking_text(group_data(), rows, NOW)

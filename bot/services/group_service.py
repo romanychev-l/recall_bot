@@ -82,11 +82,6 @@ def ranking_text(group: dict, standings: list[dict], now: datetime, page: int = 
             lines.append(f"{place}. {name} — <b>{row['learned']}</b> · {row['today']} · {row.get('practice', 0)}")
     if not standings:
         lines.append("Пока нет участников. Нажми «Вступить» и учи слова в личном чате с ботом.")
-    lines += ["", "Освоено: на повторении и полностью выученные слова.",
-              "Сегодня: разные слова с верным ответом; день по " + escape(group["timezone"]) + "."]
-    lines.append('Практика: разные ещё не освоенные слова, использованные в доступных боту группах.')
-    status = "Сводки на паузе" if not group["enabled"] else "Ежедневная сводка в " + group["report_time"]
-    lines += [status, "Участие добровольное · /leave — выйти из таблицы."]
     if pages > 1:
         lines.append(f"Страница {page}/{pages} · /leaders НОМЕР")
     return "\n".join(lines), page, pages
@@ -121,7 +116,8 @@ class GroupService:
     async def keyboard(self, page: int = 1, pages: int = 1, *, include_join: bool = True) -> InlineKeyboardMarkup:
         rows = [[InlineKeyboardButton(text="Вступить", callback_data="group:join"),
                  InlineKeyboardButton(text="Открыть бота", url=await self.bot_url())],
-                [InlineKeyboardButton(text="Обновить", callback_data=f"group:refresh:{page}")]]
+                [InlineKeyboardButton(text="Обновить", callback_data=f"group:refresh:{page}"),
+                 InlineKeyboardButton(text="Выйти", callback_data="group:leave")]]
         navigation = []
         if page > 1:
             navigation.append(InlineKeyboardButton(text="← Назад", callback_data=f"group:refresh:{page-1}"))

@@ -133,6 +133,23 @@ async def join_by_button(callback: CallbackQuery, container) -> None:
             await container.groups.publish(group, edit=True)
 
 
+@router.callback_query(F.data == "group:leave")
+async def leave_by_button(callback: CallbackQuery, container) -> None:
+    if callback.from_user.is_bot:
+        await callback.answer()
+        return
+    chat_id = callback.message.chat.id
+    async with container.groups.lock(chat_id):
+        group = await container.groups.repository.get(chat_id)
+        if group is None:
+            await callback.answer("В этом чате ещё нет таблицы.")
+            return
+        left = await container.groups.repository.leave(chat_id, callback.from_user.id)
+        await callback.answer("Ты вышел из таблицы. Вернуться можно кнопкой «Вступить»." if left else "Ты пока не участвуешь в таблице этого чата.")
+        if left:
+            await container.groups.publish(group, message_id=callback.message.message_id)
+
+
 @router.callback_query(F.data.startswith("group:refresh:"))
 async def refresh(callback: CallbackQuery, container) -> None:
     try:

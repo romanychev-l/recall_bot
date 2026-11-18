@@ -7,6 +7,7 @@ from html import escape
 from typing import Optional
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -99,10 +100,35 @@ async def _show_next(
             translation=escape(word["translation"]), remaining=len(queue),
             pos=escape(word.get("pos") or "—"),
         )
-    await bot.send_message(
+    sent = await bot.send_message(
         chat_id, text, reply_markup=answer_actions_kb(i18n, word_id_str, reverse=reverse),
     )
+    logger.info("study_prompt_sent user_id=%s word_id=%s remaining=%s message_id=%s reverse=%s",
+                user_id, word_id_str, len(queue), getattr(sent, "message_id", None), reverse)
     return True
+
+
+async def _answer_card_callback(callback: CallbackQuery, text: str | None = None) -> None:
+    try:
+        await callback.answer(text)
+    except TelegramBadRequest as error:
+        # A delayed callback acknowledgement must not prevent the next card.
+        if not any(reason in error.message.lower() for reason in ("query is too old", "query id is invalid")):
+            raise
+        logger.info("card_callback_expired user_id=%s", callback.from_user.id)
+
+
+async def _refresh_card(callback: CallbackQuery, state: FSMContext,
+                        container: Container, i18n: TranslatorRunner) -> None:
+    await _answer_card_callback(callback, i18n.message.card_refreshed())
+    data = await state.get_data()
+    logger.info("card_button_stale user_id=%s callback=%s current_word=%s",
+                callback.from_user.id, callback.data, (data.get("queue") or [None])[0])
+    if await state.get_state() == LearnSG.waiting_answer.state and data.get("queue"):
+        await _show_next(callback.message.chat.id, callback.message.bot, state, container, i18n)
+    else:
+        await _start_learning(callback.message, callback.from_user.id, state, container, i18n,
+                              reverse=callback.data.startswith("reversecard:"))
 
 
 async def send_learning_reminder(
@@ -323,7 +349,7 @@ async def on_skip(
     queue: list[str] = data.get("queue", [])
     if (not queue or queue[0] != word_id_str
             or callback.data.startswith("reversecard:") != data.get("reverse", False)):
-        await callback.answer()
+        await _refresh_card(callback, state, container, i18n)
         return
     word_id = _parse_id(word_id_str)
     user = await container.users_repo.get(callback.from_user.id)
@@ -336,7 +362,7 @@ async def on_skip(
         user["tz"],
         datetime.now(timezone.utc),
     )
-    await callback.answer(i18n.message.skipped_today())
+    await _answer_card_callback(callback, i18n.message.skipped_today())
     if queue and queue[0] == word_id_str:
         queue.pop(0)
         await state.update_data(queue=queue)
@@ -357,7 +383,7 @@ async def on_dont_know(
     reverse = data.get("reverse", False)
     if (not queue or queue[0] != word_id_str
             or callback.data.startswith("reversecard:") != reverse):
-        await callback.answer()
+        await _refresh_card(callback, state, container, i18n)
         return
     word_id = _parse_id(word_id_str)
     user = await container.users_repo.get(callback.from_user.id)
@@ -369,8 +395,13 @@ async def on_dont_know(
         await callback.answer()
         return
 
+    await _answer_card_callback(callback)
     outcome = await container.learning.evaluate_answer(user, card, "", reverse=reverse)
     await container.learning.mark_hard(callback.from_user.id, word_id, True)
+    # The answer is already committed. A failed feedback send must not let
+    # another click record the same answer again.
+    queue.pop(0)
+    await state.update_data(queue=queue)
     await callback.message.answer(
         _with_examples(
             i18n.message.answer_revealed(word=escape(
@@ -380,8 +411,14 @@ async def on_dont_know(
         )
     )
 
-    if queue and queue[0] == word_id_str:
-        queue.pop(0)
-        await state.update_data(queue=queue)
-    await callback.answer()
     await _show_next(callback.message.chat.id, callback.message.bot, state, container, i18n)
+
+
+@router.callback_query(F.data.startswith(("card:skip:", "card:dontknow:",
+                                         "reversecard:skip:", "reversecard:dontknow:")))
+async def recover_card_button(
+    callback: CallbackQuery, state: FSMContext, container: Container, i18n: TranslatorRunner,
+) -> None:
+    # After a restart or another dialog, show an answerable card without
+    # treating an old click as a new review or postponing the wrong word.
+    await _refresh_card(callback, state, container, i18n)

@@ -33,6 +33,7 @@ message-usage_examples =
     { $examples }
 message-new_batch_issued = 🎉 Текущий батч пройден — выдан новый!
 message-skipped_today = Пропущено до завтра
+message-card_refreshed = Показываю актуальную карточку занятия.
 message-marked_hard = Помечено как сложное
 message-skip_only_inline = /skip работает через кнопку в карточке.
 message-hard_only_inline = /hard работает через кнопку в карточке.

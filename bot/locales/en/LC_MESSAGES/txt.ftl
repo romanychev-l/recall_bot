@@ -33,6 +33,7 @@ message-usage_examples =
     { $examples }
 message-new_batch_issued = 🎉 Current batch cleared — new batch issued!
 message-skipped_today = Skipped until tomorrow
+message-card_refreshed = Showing the current study card.
 message-marked_hard = Marked as hard
 message-skip_only_inline = /skip works via the card button.
 message-hard_only_inline = /hard works via the card button.

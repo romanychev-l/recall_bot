@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 import pytest
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.base import BaseSession
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.methods import SendMessage, GetMe, EditMessageText, AnswerCallbackQuery
 from aiogram.types import CallbackQuery, Chat, Message, Update, User
 from aiogram.fsm.storage.memory import MemoryStorage, SimpleEventIsolation
@@ -144,6 +145,133 @@ async def test_reminder_keeps_current_word_queue_and_direction(harness, reverse)
     messages = [m for m in h.sent if isinstance(m, SendMessage)]
     assert len(messages) == 1
     assert (word["english"] if reverse else word["translation"]) in messages[0].text
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("action", ["skip", "dontknow"])
+async def test_reminder_buttons_send_the_next_word(harness, reverse, action):
+    h = harness
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    await h.state.update_data(reverse=reverse)
+    await h.remind()
+    before = deepcopy(await h.state.get_data())
+    first = int(before["queue"][0])
+    prompt = latest_menu(h)
+    callback_data = next(b.callback_data for row in prompt.reply_markup.inline_keyboard for b in row
+                         if f":{action}:" in b.callback_data)
+    sent_before = len(h.sent)
+    await h.send(callback=callback_data)
+    assert (await h.state.get_data())["queue"] == before["queue"][1:]
+    next_word = await h.container.words_repo.by_id(int(before["queue"][1]))
+    messages = [m for m in h.sent[sent_before:] if isinstance(m, SendMessage)]
+    assert len(messages) == (1 if action == "skip" else 2)
+    assert (next_word["english"] if reverse else next_word["translation"]) in messages[-1].text
+    card = await h.container.cards_repo.get(USER.id, first)
+    async with h.session_factory() as session:
+        logs = (await session.scalars(select(ReviewLog))).all()
+        if action == "skip":
+            assert card["skip_until"] > NOW and logs == []
+        else:
+            assert card["is_hard"] and len(logs) == 1 and logs[0].result == "again"
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("action", ["skip", "dontknow"])
+async def test_old_button_recovers_next_word_after_network_failure(harness, monkeypatch, reverse, action):
+    h = harness
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    await h.state.update_data(reverse=reverse)
+    await h.remind()
+    before = deepcopy(await h.state.get_data())
+    prefix = "reversecard" if reverse else "card"
+    button = f"{prefix}:{action}:{before['queue'][0]}"
+    send_message = h.bot.send_message
+    monkeypatch.setattr(h.bot, "send_message", AsyncMock(side_effect=RuntimeError("network unavailable")))
+    with pytest.raises(RuntimeError, match="network unavailable"):
+        await h.send(callback=button)
+    assert (await h.state.get_data())["queue"] == before["queue"][1:]
+    async with h.session_factory() as session:
+        cards_before_retry = (await session.execute(select(UserCard.__table__))).mappings().all()
+        logs_before_retry = (await session.execute(select(ReviewLog.__table__))).mappings().all()
+    monkeypatch.setattr(h.bot, "send_message", send_message)
+    await h.send(callback=button)
+    next_word = await h.container.words_repo.by_id(int(before["queue"][1]))
+    assert (next_word["english"] if reverse else next_word["translation"]) in latest_menu(h).text
+    assert (await h.state.get_data())["queue"] == before["queue"][1:]
+    async with h.session_factory() as session:
+        assert (await session.execute(select(UserCard.__table__))).mappings().all() == cards_before_retry
+        assert (await session.execute(select(ReviewLog.__table__))).mappings().all() == logs_before_retry
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("action", ["skip", "dontknow"])
+async def test_expired_callback_acknowledgement_does_not_block_next_word(harness, monkeypatch, reverse, action):
+    h = harness
+    await h.send("/more 3")
+    if reverse:
+        await h.send("/reverse")
+    before = deepcopy(await h.state.get_data())
+    request = h.bot.session.make_request
+    async def expired_ack(bot, method, timeout=None):
+        if isinstance(method, AnswerCallbackQuery):
+            raise TelegramBadRequest(method=method, message="query is too old and response timeout expired")
+        return await request(bot, method, timeout)
+    monkeypatch.setattr(h.bot.session, "make_request", expired_ack)
+    prefix = "reversecard" if reverse else "card"
+    await h.send(callback=f"{prefix}:{action}:{before['queue'][0]}")
+    assert (await h.state.get_data())["queue"] == before["queue"][1:]
+    word = await h.container.words_repo.by_id(int(before["queue"][1]))
+    assert (word["english"] if reverse else word["translation"]) in latest_menu(h).text
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+async def test_failed_dontknow_feedback_does_not_record_answer_twice(harness, monkeypatch, reverse):
+    h = harness
+    await h.send("/more 3")
+    if reverse:
+        await h.send("/reverse")
+    before = deepcopy(await h.state.get_data())
+    prefix = "reversecard" if reverse else "card"
+    button = f"{prefix}:dontknow:{before['queue'][0]}"
+    request = h.bot.session.make_request
+    async def failed_feedback(bot, method, timeout=None):
+        if isinstance(method, SendMessage) and "👀" in method.text:
+            raise RuntimeError("feedback delivery failed")
+        return await request(bot, method, timeout)
+    monkeypatch.setattr(h.bot.session, "make_request", failed_feedback)
+    with pytest.raises(RuntimeError, match="feedback delivery failed"):
+        await h.send(callback=button)
+    assert (await h.state.get_data())["queue"] == before["queue"][1:]
+    monkeypatch.setattr(h.bot.session, "make_request", request)
+    await h.send(callback=button)
+    async with h.session_factory() as session:
+        assert len((await session.scalars(select(ReviewLog))).all()) == 1
+    next_word = await h.container.words_repo.by_id(int(before["queue"][1]))
+    assert (next_word["english"] if reverse else next_word["translation"]) in latest_menu(h).text
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("action", ["skip", "dontknow"])
+async def test_card_button_after_lost_state_restores_quiz_without_reviewing_old_word(harness, reverse, action):
+    h = harness
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    await h.state.update_data(reverse=reverse)
+    await h.remind()
+    word_id = int((await h.state.get_data())["queue"][0])
+    word = await h.container.words_repo.by_id(word_id)
+    await h.send(word["translation"] if reverse else word["english"])
+    card = await h.container.cards_repo.get(USER.id, word_id)
+    await h.state.clear()
+    prefix = "reversecard" if reverse else "card"
+    await h.send(callback=f"{prefix}:{action}:{word_id}")
+    data = await h.state.get_data()
+    assert await h.state.get_state() == LearnSG.waiting_answer.state
+    assert data["reverse"] is reverse and str(word_id) not in data["queue"]
+    assert await h.container.cards_repo.get(USER.id, word_id) == card
+    next_word = await h.container.words_repo.by_id(int(data["queue"][0]))
+    assert (next_word["english"] if reverse else next_word["translation"]) in latest_menu(h).text
+    async with h.session_factory() as session:
+        assert len((await session.scalars(select(ReviewLog))).all()) == 1
 
 
 @pytest.mark.parametrize("dialog", [
@@ -667,6 +795,8 @@ async def test_old_card_buttons_cannot_change_current_reverse_session(harness, a
     await h.send(callback=f"{prefix}:{action}:{word_id}")
     assert await h.state.get_data() == before
     assert await h.container.cards_repo.get(USER.id, int(word_id)) == card
+    current = await h.container.words_repo.by_id(int(before["queue"][0]))
+    assert current["english"] in latest_menu(h).text
     async with h.session_factory() as session:
         assert (await session.scalars(select(ReviewLog))).all() == []
 

@@ -57,7 +57,7 @@ async def main() -> None:
         c = container_ref.get("container")
         if c is None:
             return
-        await daily_reminder(bot, c, user_id)
+        await daily_reminder(bot, c, user_id, dispatcher=dp, translator_hub=translator_hub)
 
     container = build_container(
         session_factory, scheduler=scheduler, send_reminder=send_reminder, bot=bot

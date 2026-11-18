@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,6 +19,7 @@ from bot.db.models import Word, WordSense, UserCard, ReviewLog
 from bot.db.seed import seed_from_csv
 from bot.domain.parts_of_speech import ALL_POS, POS_BITS
 from bot.handlers import actions, fallback, help, learn, settings, start, stats
+from bot.scheduler.jobs import daily_reminder
 from bot.states.learning import LearnSG
 from bot.states.onboarding import OnboardSG
 from bot.states.settings import SettingsSG
@@ -90,10 +92,136 @@ async def harness(session_factory, dispatcher, translator_hub):
         await dispatcher.feed_update(bot, update, container=container,
                                      i18n=translator_hub.get_translator_by_locale(locale))
 
+    async def remind(user_id=USER.id):
+        await daily_reminder(bot, container, user_id, dispatcher=dispatcher, translator_hub=translator_hub)
+
     yield SimpleNamespace(container=container, state=state, sent=recording.sent,
-                          send=send, session_factory=session_factory)
+                          send=send, remind=remind, bot=bot, session_factory=session_factory)
     await state.clear()
     await bot.session.close()
+
+
+@pytest.mark.parametrize("locale", ["ru", "en"])
+@pytest.mark.parametrize("reverse", [False, True])
+async def test_reminder_sends_one_card_and_accepts_plain_answer(harness, locale, reverse):
+    h = harness
+    await h.container.users_repo.update(USER.id, language=locale)
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    await h.state.update_data(reverse=reverse)
+    async with h.session_factory() as session:
+        cards_before = (await session.execute(select(UserCard.__table__))).mappings().all()
+    await h.remind()
+    messages = [m for m in h.sent if isinstance(m, SendMessage)]
+    assert len(messages) == 1
+    assert "/learn" not in messages[0].text
+    assert ("Переведи" if locale == "ru" else "Translate") in messages[0].text
+    data = await h.state.get_data()
+    assert await h.state.get_state() == LearnSG.waiting_answer.state
+    assert data["user_id"] == USER.id and data["reverse"] is reverse
+    word = await h.container.words_repo.by_id(int(data["queue"][0]))
+    assert (word["english"] if reverse else word["translation"]) in messages[0].text
+    async with h.session_factory() as session:
+        assert (await session.execute(select(UserCard.__table__))).mappings().all() == cards_before
+        assert (await session.scalars(select(ReviewLog))).all() == []
+    await h.send(word["translation"] if reverse else word["english"], locale=locale)
+    async with h.session_factory() as session:
+        logs = (await session.scalars(select(ReviewLog))).all()
+        assert len(logs) == 1 and logs[0].word_id == word["id"] and logs[0].result == "good"
+    assert "✅" in [m.text for m in h.sent if isinstance(m, SendMessage)][1]
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+async def test_reminder_keeps_current_word_queue_and_direction(harness, reverse):
+    h = harness
+    await h.send("/more 3")
+    if reverse:
+        await h.send("/reverse")
+    before = deepcopy(await h.state.get_data())
+    word = await h.container.words_repo.by_id(int(before["queue"][0]))
+    h.sent.clear()
+    await h.remind()
+    assert await h.state.get_data() == before
+    messages = [m for m in h.sent if isinstance(m, SendMessage)]
+    assert len(messages) == 1
+    assert (word["english"] if reverse else word["translation"]) in messages[0].text
+
+
+@pytest.mark.parametrize("dialog", [
+    OnboardSG.choose_start, OnboardSG.enter_skip_n,
+    SettingsSG.edit_batch_size, SettingsSG.edit_reminder_time, SettingsSG.edit_tz, SettingsSG.edit_pos,
+])
+async def test_reminder_leaves_other_dialogs_untouched(harness, dialog):
+    h = harness
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    await h.state.set_state(dialog)
+    await h.state.set_data({"draft": "09:30", "reverse": True})
+    await h.remind()
+    assert await h.state.get_state() == dialog.state
+    assert await h.state.get_data() == {"draft": "09:30", "reverse": True}
+    assert h.sent == []
+
+
+async def test_reminder_starts_from_settings_menu_without_waiting_for_a_command(harness):
+    h = harness
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    await h.send("/settings")
+    assert await h.state.get_state() == SettingsSG.menu.state
+    h.sent.clear()
+    await h.remind()
+    assert await h.state.get_state() == LearnSG.waiting_answer.state
+    assert len([m for m in h.sent if isinstance(m, SendMessage)]) == 1
+
+
+@pytest.mark.parametrize("reason", ["future", "skipped", "filtered", "no_cards"])
+async def test_reminder_is_silent_when_no_words_are_available(harness, reason):
+    h = harness
+    if reason != "no_cards":
+        await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+        async with h.session_factory() as session:
+            if reason == "future":
+                await session.execute(update(UserCard).values(my_state="review", due=NOW + timedelta(days=30)))
+            elif reason == "skipped":
+                await session.execute(update(UserCard).values(skip_until=NOW + timedelta(days=30)))
+            await session.commit()
+        if reason == "filtered":
+            await h.container.users_repo.update(USER.id, pos_filter=POS_BITS["num"])
+    before = await h.container.users_repo.get(USER.id)
+    await h.state.update_data(reverse=True)
+    await h.remind()
+    assert h.sent == []
+    assert await h.state.get_state() is None
+    assert await h.state.get_data() == {"reverse": True}
+    assert await h.container.users_repo.get(USER.id) == before
+
+
+@pytest.mark.parametrize("active", [False, True])
+async def test_failed_reminder_restores_previous_session(harness, monkeypatch, caplog, active):
+    h = harness
+    await h.container.batch.issue_next_batch(await h.container.users_repo.get(USER.id))
+    if active:
+        await h.send("/reverse")
+    else:
+        await h.state.update_data(reverse=True)
+    previous_state = await h.state.get_state()
+    previous_data = deepcopy(await h.state.get_data())
+    failed = AsyncMock(side_effect=RuntimeError("delivery failed"))
+    monkeypatch.setattr(h.bot, "send_message", failed)
+    await h.remind()
+    failed.assert_awaited_once()
+    assert await h.state.get_state() == previous_state
+    assert await h.state.get_data() == previous_data
+    assert "reminder_failed" in caplog.text
+
+
+async def test_reminder_with_missing_user_or_stale_queue_sends_no_completion_message(harness):
+    h = harness
+    await h.remind(USER.id + 1)
+    await h.state.set_state(LearnSG.waiting_answer)
+    await h.state.set_data({"user_id": USER.id, "queue": ["9999999"], "reverse": True})
+    await h.remind()
+    assert h.sent == []
+    assert await h.state.get_state() is None
+    assert await h.state.get_data() == {"reverse": True}
 
 
 async def test_nothing_due_button_adds_words_and_starts_session(harness):

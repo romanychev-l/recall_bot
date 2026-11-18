@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 from datetime import datetime, timezone
 from html import escape
 from typing import Optional
@@ -14,6 +15,7 @@ from fluentogram import TranslatorRunner
 from bot.container import Container
 from bot.domain.parts_of_speech import ALL_POS, study_word
 from bot.states.learning import LearnSG
+from bot.states.settings import SettingsSG
 from bot.utils.keyboards import answer_actions_kb, learning_actions_kb
 
 logger = logging.getLogger(__name__)
@@ -49,16 +51,18 @@ async def _show_next(
     state: FSMContext,
     container: Container,
     i18n: TranslatorRunner,
+    *, notify_done: bool = True,
 ) -> bool:
     data = await state.get_data()
     reverse = data.get("reverse", False)
     queue: list[str] = data.get("queue", [])
     user_id = data.get("user_id")
     if not queue:
-        await bot.send_message(
-            chat_id, i18n.message.session_done(),
-            reply_markup=learning_actions_kb(i18n, can_continue=True, reverse=reverse),
-        )
+        if notify_done:
+            await bot.send_message(
+                chat_id, i18n.message.session_done(),
+                reply_markup=learning_actions_kb(i18n, can_continue=True, reverse=reverse),
+            )
         await state.clear()
         await state.update_data(reverse=reverse)
         return False
@@ -72,19 +76,19 @@ async def _show_next(
     if card is None:
         queue.pop(0)
         await state.update_data(queue=queue)
-        return await _show_next(chat_id, bot, state, container, i18n)
+        return await _show_next(chat_id, bot, state, container, i18n, notify_done=notify_done)
     word = await container.words_repo.by_id(card["word_id"])
     if word is None:
         queue.pop(0)
         await state.update_data(queue=queue)
-        return await _show_next(chat_id, bot, state, container, i18n)
+        return await _show_next(chat_id, bot, state, container, i18n, notify_done=notify_done)
     user = await container.users_repo.get(user_id)
     mask = (user or {}).get("pos_filter", ALL_POS) & card.get("study_pos_filter", ALL_POS)
     word = study_word(word, await container.words_repo.senses(card["word_id"]), mask)
     if word is None:
         queue.pop(0)
         await state.update_data(queue=queue)
-        return await _show_next(chat_id, bot, state, container, i18n)
+        return await _show_next(chat_id, bot, state, container, i18n, notify_done=notify_done)
     if reverse:
         text = i18n.message.prompt_reverse(
             word=escape(word["english"]), remaining=len(queue),
@@ -99,6 +103,35 @@ async def _show_next(
         chat_id, text, reply_markup=answer_actions_kb(i18n, word_id_str, reverse=reverse),
     )
     return True
+
+
+async def send_learning_reminder(
+    bot, state: FSMContext, container: Container, i18n: TranslatorRunner, user: dict,
+) -> bool:
+    """Send one answerable card, preserving active sessions and other dialogs.
+
+    The caller holds the dispatcher's event-isolation lock for this user.
+    """
+    previous_state = await state.get_state()
+    if previous_state not in (None, LearnSG.waiting_answer.state, SettingsSG.menu.state):
+        return False
+    previous_data = deepcopy(await state.get_data())
+    try:
+        if previous_state != LearnSG.waiting_answer.state or not previous_data.get("queue"):
+            session = await container.learning.build_session(user)
+            if not session:
+                return False
+            await state.set_state(LearnSG.waiting_answer)
+            await state.set_data({
+                "user_id": user["id"], "queue": _queue_ids(session),
+                "reverse": previous_data.get("reverse", False),
+            })
+        return await _show_next(user["id"], bot, state, container, i18n, notify_done=False)
+    except Exception:
+        # A failed Telegram delivery must not replace the user's current dialog.
+        await state.set_data(previous_data)
+        await state.set_state(previous_state)
+        raise
 
 
 @router.message(Command("learn"))

@@ -3,10 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 import sqlite3
 
+import pytest
+
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine
 
 from bot.db.models import Base
@@ -121,5 +124,62 @@ def test_chat_practice_migration_keeps_entire_existing_database(tmp_path):
         assert {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in tables} == before
         assert db.execute('SELECT count(*) FROM chat_practice').fetchone() == (0,)
         assert db.execute('SELECT count(*) FROM chat_practice_praise').fetchone() == (0,)
+        assert db.execute('PRAGMA integrity_check').fetchone() == ('ok',)
+        assert db.execute('PRAGMA foreign_key_check').fetchall() == []
+
+
+@pytest.mark.parametrize('custom_translation,custom_example', [(False, False), (True, False), (False, True), (True, True)])
+def test_don_correction_preserves_identity_progress_and_custom_content(tmp_path, custom_translation, custom_example):
+    from datetime import datetime, timezone
+    from sqlalchemy import insert
+    from bot.db.models import Batch, ReviewLog, User, UserCard, Word, WordSense
+    from bot.domain.parts_of_speech import POS_BITS
+
+    path = tmp_path / 'don.db'
+    cfg = Config(str(ROOT / 'alembic.ini'))
+    cfg.set_main_option('script_location', str(ROOT / 'alembic'))
+    cfg.set_main_option('sqlalchemy.url', f'sqlite:///{path}')
+    migration = ScriptDirectory.from_config(cfg).get_revision('e064a7b4d253').module
+    command.upgrade(cfg, migration.down_revision)
+    now = datetime(2026, 11, 19, 12, tzinfo=timezone.utc)
+    translation = 'мой перевод' if custom_translation else migration.OLD_TRANSLATION
+    example = 'My own example for don.' if custom_example else migration.OLD_EXAMPLE
+    engine = create_engine(f'sqlite:///{path}')
+    with engine.begin() as connection:
+        connection.execute(insert(User).values(id=42, created_at=now))
+        connection.execute(insert(Word), [
+            dict(id=7, english='don', translation=translation, frequency_rank=25, pos='verb', example=example),
+            dict(id=8, english='nominate', translation='выдвигать', frequency_rank=26, pos='verb',
+                 example='I would like to nominate Don Jones as chairman.'),
+        ])
+        connection.execute(insert(WordSense), [
+            dict(word_id=7, position=0, translation='надевать', pos_mask=POS_BITS['verb']),
+            dict(word_id=7, position=1, translation='надеть', pos_mask=POS_BITS['verb']),
+            dict(word_id=7, position=2, translation='дон', pos_mask=POS_BITS['noun'] | POS_BITS['name']),
+        ])
+        connection.execute(insert(Batch).values(id=1, user_id=42, created_at=now))
+        connection.execute(insert(UserCard).values(user_id=42, word_id=7, batch_id=1, frequency_rank=25,
+            fsrs={'stability': 42}, due=now, my_state='review', is_hard=True, skip_until=now,
+            created_at=now, updated_at=now))
+        connection.execute(insert(ReviewLog).values(user_id=42, word_id=7, batch_id=1,
+            result='again', user_input='', reviewed_at=now))
+    engine.dispose()
+    with sqlite3.connect(path) as db:
+        tables = [row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                  if row[0] not in {'words', 'word_senses', 'alembic_version'}]
+        before = {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in tables}
+        other_word = db.execute('SELECT * FROM words WHERE id=8').fetchone()
+        senses = db.execute('SELECT * FROM word_senses ORDER BY position').fetchall()
+    command.upgrade(cfg, 'head')
+    command.upgrade(cfg, 'head')
+    with sqlite3.connect(path) as db:
+        assert {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in tables} == before
+        assert db.execute('SELECT * FROM words WHERE id=8').fetchone() == other_word
+        assert db.execute('SELECT id, english, frequency_rank, pos FROM words WHERE id=7').fetchone() == (7, 'don', 25, 'verb')
+        assert db.execute('SELECT translation, example FROM words WHERE id=7').fetchone() == (
+            translation if custom_translation else migration.NEW_TRANSLATION,
+            example if custom_example else migration.NEW_EXAMPLE,
+        )
+        assert db.execute('SELECT * FROM word_senses ORDER BY position').fetchall() == (senses if custom_translation else senses[:2])
         assert db.execute('PRAGMA integrity_check').fetchone() == ('ok',)
         assert db.execute('PRAGMA foreign_key_check').fetchall() == []

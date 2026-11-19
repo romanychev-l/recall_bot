@@ -72,3 +72,45 @@ def test_builder_refuses_partial_coverage_before_writing(tmp_path):
         build(dictionary, authored, sources)
     assert dictionary.read_bytes() == before
     assert not sources.exists()
+
+
+def test_builder_rejects_don_contraction_fragments_and_person_names(tmp_path):
+    dictionary = tmp_path / 'words.csv'
+    row = dict(english='don', translation='надевать; надеть', frequency_rank=1,
+               pos='verb', example='')
+    write_csv(dictionary, list(row), [row])
+    authored = tmp_path / 'authored.csv'
+    write_csv(authored, ['english', 'example'], [])
+    corpus = tmp_path / 'eng.tsv.bz2'
+    with bz2.open(corpus, 'wt', encoding='utf-8') as target:
+        for sid, text in enumerate([
+            "I don' think Tom expected to be here for so long.",
+            'I don’ think Tom expected to be here for so long.',
+            'I would like to nominate Don Jones as chairman.',
+            'Please don your coat before going outside.',
+        ], 1):
+            target.write(f'{sid}\teng\t{text}\tAlice\t0\t0\n')
+    kaikki = tmp_path / 'kaikki.jsonl'
+    kaikki.write_text(json.dumps(dict(word='don', pos='verb', senses=[dict(examples=[
+        dict(text="I don't think Tom expected to be here for so long.", type='example'),
+        dict(text='I would like to nominate Don Jones as chairman.', type='example'),
+        dict(text='The workers don protective gloves before starting work.', type='example'),
+    ])])), encoding='utf-8')
+    sources = tmp_path / 'sources.csv'
+    build(dictionary, authored, sources, kaikki=kaikki, tatoeba=corpus)
+    assert set(read_csv(dictionary)[0]['example'].splitlines()) == {
+        'Please don your coat before going outside.',
+        'The workers don protective gloves before starting work.',
+    }
+
+
+def test_shipped_don_is_a_verb_with_reviewed_examples():
+    word = next(row for row in read_csv(ROOT / 'data/dictionary.csv') if row['english'] == 'don')
+    assert word['translation'] == 'надевать; надеть'
+    assert word['pos'] == 'verb'
+    senses = [row for row in read_csv(ROOT / 'data/dictionary_senses.csv') if row['english'] == 'don']
+    assert {(row['translation'], row['parts_of_speech']) for row in senses} == {
+        ('надевать', 'verb'), ('надеть', 'verb'),
+    }
+    authored = [row['example'] for row in read_csv(ROOT / 'data/authored_examples.csv') if row['english'] == 'don']
+    assert word['example'].splitlines() == authored

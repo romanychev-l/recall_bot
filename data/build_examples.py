@@ -35,18 +35,36 @@ def contains_word(text: str, word: str) -> bool:
     return word_pattern(word).search(text) is not None
 
 
+def is_usage_candidate(text: str, word: str, pos: str) -> bool:
+    """Reject contraction fragments and obvious names used in place of verbs.
+
+    This is a conservative corpus filter, not a meaning or POS tagger. Authored
+    examples are reviewed separately and may contain quoted words or elisions.
+    """
+    for match in word_pattern(word).finditer(text):
+        tail = text[match.end():]
+        if tail.startswith(("'", "’")) and not re.match(r"['’]s\b", tail):
+            continue
+        if pos == 'verb' and match.group()[0].isupper():
+            prefix = text[:match.start()].rstrip()
+            if prefix and prefix[-1] not in '.?!':
+                continue
+        return True
+    return False
+
+
 def sentence_score(text: str, ranks: dict[str, int]) -> float:
     tokens = TOKEN.findall(text.lower())
     rough_context = 20000 * len(set(tokens) & ROUGH_LANGUAGE)
     return rough_context + abs(len(tokens) - 9) * 130 + sum(ranks.get(t, 20000) for t in tokens) / max(1, len(tokens))
 
 
-def add_candidate(candidates: dict, word: str, text: str, score: float, **source) -> None:
+def add_candidate(candidates: dict, word: str, text: str, score: float, *, pos: str = '', **source) -> None:
     pool = candidates[word]
     if len(pool) == 8 and score > pool[-1][0]:
         return
     text = ' '.join(text.split())
-    if not contains_word(text, word):
+    if not is_usage_candidate(text, word, pos):
         return
     if any(item['example'] == text for _, item in pool):
         return
@@ -55,7 +73,8 @@ def add_candidate(candidates: dict, word: str, text: str, score: float, **source
     del pool[8:]
 
 
-def collect_tatoeba(path: Path, candidates: dict, ranks: dict[str, int], *, cc0: bool) -> None:
+def collect_tatoeba(path: Path, candidates: dict, ranks: dict[str, int],
+                    parts: dict[str, str], *, cc0: bool) -> None:
     with bz2.open(path, 'rt', encoding='utf-8') as source:
         for line in source:
             columns = line.rstrip('\n').split('\t')
@@ -69,7 +88,7 @@ def collect_tatoeba(path: Path, candidates: dict, ranks: dict[str, int], *, cc0:
                 continue
             score = sentence_score(text, ranks) + (0 if cc0 else 200)
             for word in set(tokens) & ranks.keys():
-                add_candidate(candidates, word, text, score,
+                add_candidate(candidates, word, text, score, pos=parts[word],
                               source='Tatoeba', source_url=f'https://tatoeba.org/en/sentences/show/{sid}',
                               author='' if cc0 else ('Tatoeba contributors' if columns[3] == '\\N' else columns[3]),
                               license='CC0-1.0' if cc0 else 'CC-BY-2.0-FR')
@@ -95,7 +114,7 @@ def collect_kaikki(path: Path, candidates: dict, ranks: dict[str, int], parts: d
                 score = sentence_score(text, ranks) + (300 if entry.get('pos') == parts[word] else 900)
                 if text[-1:] not in '.?!':
                     score += 2000
-                add_candidate(candidates, word, text, score, source='Wiktionary',
+                add_candidate(candidates, word, text, score, pos=parts[word], source='Wiktionary',
                               source_url=f'https://en.wiktionary.org/wiki/{quote(entry["word"])}#English',
                               author='Wiktionary contributors', license='CC-BY-SA-4.0')
 
@@ -132,12 +151,13 @@ def build(dictionary: Path, authored: Path, sources: Path, *, kaikki: Path | Non
         overrides[word].append(dict(english=word, example=text, source='Recall',
                                     source_url='', author='Recall contributors', license='CC0-1.0'))
     candidates = defaultdict(list)
+    parts = {w['english']: w['pos'] for w in words}
     if cc0:
-        collect_tatoeba(cc0, candidates, ranks, cc0=True)
+        collect_tatoeba(cc0, candidates, ranks, parts, cc0=True)
     if tatoeba:
-        collect_tatoeba(tatoeba, candidates, ranks, cc0=False)
+        collect_tatoeba(tatoeba, candidates, ranks, parts, cc0=False)
     if kaikki:
-        collect_kaikki(kaikki, candidates, ranks, {w['english']: w['pos'] for w in words})
+        collect_kaikki(kaikki, candidates, ranks, parts)
     provenance = []
     missing = []
     for word in words:

@@ -6,7 +6,7 @@ readme = "README.md"
 # fluent-compiler 1.1 uses AST arguments removed in Python 3.15.
 requires-python = ">=3.13,<3.15"
 dependencies = [
-    "aiogram>=3.26,<4",
+    "aiogram>=3.33.0,<4",
     "sqlalchemy[asyncio]>=2.0,<3",
     "aiosqlite>=0.20",
     "alembic>=1.13,<2",
